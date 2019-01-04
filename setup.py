@@ -5,6 +5,7 @@ import os
 import os.path as osp
 import time
 import subprocess
+import setuptools
 
 
 def test_prereq():
@@ -58,8 +59,9 @@ def test_prereq():
 
 test_prereq()
 
-# from numpy.distutils.core import setup
-from setuptools import setup, find_packages
+
+from numpy.distutils.core import setup
+
 
 # Create list of all sub-directories with
 #   __init__.py files...
@@ -203,8 +205,8 @@ setup(name='Inelastica',
                'Inelastica/scripts/WriteWavefunctions',
                'Inelastica/utils/agr2pdf',
                'Inelastica/utils/bands2xmgr',
-               'Inelastica/utils/siesta_cleanup'],
-      packages=find_packages(),
-      # packages=packages,
+               'Inelastica/utils/siesta_cleanup'
+               ],
+      packages=packages,
       configuration=configuration
       )
