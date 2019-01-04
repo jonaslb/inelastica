@@ -58,7 +58,8 @@ def test_prereq():
 
 test_prereq()
 
-from numpy.distutils.core import setup
+# from numpy.distutils.core import setup
+from setuptools import setup, find_packages
 
 # Create list of all sub-directories with
 #   __init__.py files...
@@ -203,5 +204,7 @@ setup(name='Inelastica',
                'Inelastica/utils/agr2pdf',
                'Inelastica/utils/bands2xmgr',
                'Inelastica/utils/siesta_cleanup'],
-      packages=packages,
-      configuration=configuration)
+      packages=find_packages(),
+      # packages=packages,
+      configuration=configuration
+      )

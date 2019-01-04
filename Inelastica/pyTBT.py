@@ -381,7 +381,7 @@ def WritePDOS(fn, options, DevGF, DOS, basis):
             g.AddDatasets(XMGR.XYset(ee-DevGF.HS.ef, (-1)**iS*PDOS[iS], legend=name, Lwidth=2))
 
     # Set axes and write XMGR plot to file
-    g.SetXaxis(label='E-E\sF\N (eV)', autoscale=True)
+    g.SetXaxis(label=r'E-E\sF\N (eV)', autoscale=True)
     g.SetYaxis(label='DOS (1/eV/atom)', autoscale=True)
     g.SetTitle(fn, size=1.3)
     g.ShowLegend()
@@ -418,7 +418,7 @@ def WriteMPSH(fn, options, DevGF, DOS, ev0):
             g.AddDatasets(XMGR.XYset(options.Elist, (-1)**iS*DOS[iS, :, ii], legend='', Lwidth=2))
 
     # Set axes and write XMGR plot to file
-    g.SetXaxis(label='E-E\sF\N (eV)', autoscale=True)
+    g.SetXaxis(label=r'E-E\sF\N (eV)', autoscale=True)
     g.SetYaxis(label='DOS (1/eV)', autoscale=True)
     # Add MPSH eigenvalues to plot after axis scaling
     g.AddDatasets(XMGR.XYset(ev0, 0*ev0+1, Ltype=0, Stype=3))
