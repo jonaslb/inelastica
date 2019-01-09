@@ -528,8 +528,8 @@ def copy_chemical_info(from_p, to_p):
     with open(to_p, "a") as f:
         f.writelines(filter(lambda l: l.startswith("NumberOfSpecies"), f0))
         try:
-            start = f0.index("%block ChemicalSpeciesLabel")
-            end = f0.index("%endblock ChemicalSpeciesLabel")
+            start = f0.index("%block ChemicalSpeciesLabel\n")
+            end = f0.index("%endblock ChemicalSpeciesLabel\n")
             f.writelines(f0[start:end+1])
         except ValueError as e:
             # There was no ChemicalSpeciesLabel in the in-file
