@@ -525,7 +525,7 @@ def copy_chemical_info(from_p, to_p):
     # MG.Geom, so this function allows copying the info from one fdf to another.
     with open(from_p, "r") as f:
         f0 = f.readlines()
-    with open(to_p, "wa") as f:
+    with open(to_p, "a") as f:
         f.writelines(filter(lambda l: l.startswith("NumberOfSpecies"), f0))
         try:
             start = f0.index("%block ChemicalSpeciesLabel")
