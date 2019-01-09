@@ -30,6 +30,7 @@ import netCDF4 as NC4
 import numpy as N
 import Inelastica.MakeGeom as MG
 import Inelastica.physics.constants as PC
+from Inelastica.templating import j2
 
 
 # -----------------------------------------------------------------------------------------------------
@@ -138,7 +139,8 @@ def SetupCGrun(templateCGrun, newCGrun, NewContactSeparation, AtomsPerLayer,
 # -----------------------------------------------------------------------------------------------------
 
 def SetupFCrun(CGrun, newFCrun, FCfirst, FClast, displacement=0.02,
-               overwrite=False, PBStemplate=None, PBSsubs=None, submitJob=False):
+               overwrite=False, PBStemplate=None, PBSsubs=None, submitJob=False,
+               pbs_use_jinja=False):
     """
     CGrun                : Path+foldername to a relaxed structure CGrun folder on
                               which to perform a FCrun calculation. This folder must
@@ -204,7 +206,8 @@ def SetupFCrun(CGrun, newFCrun, FCfirst, FClast, displacement=0.02,
             for line in lines: f.write(line)
             f.close()
     # PBS files
-    MakePBS(PBStemplate, newFCrun+'/RUN.pbs', PBSsubs, submitJob, rtype='TS')
+    MakePBS(PBStemplate, newFCrun+'/RUN.pbs', PBSsubs, submitJob, rtype='TS',
+            use_jinja=pbs_use_jinja)
 
 
 # -----------------------------------------------------------------------------------------------------
@@ -212,7 +215,8 @@ def SetupFCrun(CGrun, newFCrun, FCfirst, FClast, displacement=0.02,
 # -----------------------------------------------------------------------------------------------------
 
 def SetupOSrun(CGrun, newOSrun, displacement=0.02,
-               overwrite=False, PBStemplate=None, PBSsubs=None, submitJob=False):
+               overwrite=False, PBStemplate=None, PBSsubs=None, submitJob=False,
+               pbs_use_jinja=False):
     """
     CGrun                : Path+foldername to a relaxed structure CGrun folder on
                               which to run an onlyS calculation. This folder must
@@ -288,7 +292,8 @@ def SetupOSrun(CGrun, newOSrun, displacement=0.02,
             else: f.write(line)
         f.close()
     # PBS files
-    MakePBS(PBStemplate, newOSrun+'/RUN.pbs', PBSsubs, submitJob, rtype='OS')
+    MakePBS(PBStemplate, newOSrun+'/RUN.pbs', PBSsubs, submitJob, rtype='OS',
+            use_jinja=pbs_use_jinja)
 
 
 # -----------------------------------------------------------------------------------------------------
@@ -815,7 +820,8 @@ def FindElectrodeSep(directory, AtomsPerLayer):
     return g.ContactSeparation, DeviceFirst, DeviceLast
 
 
-def MakePBS(PBStemplate, PBSout, PBSsubs, submitJob, rtype='TS'):
+def MakePBS(PBStemplate, PBSout, PBSsubs, submitJob, rtype='TS',
+            use_jinja=False):
     if PBStemplate == None:
         rtypes = {'TS': 'RUN.TS.pbs', 'OS': 'RUN.OS.pbs', 'PY': 'RUN.py.pbs'}
         PBStemplate = rtypes[rtype]
@@ -826,7 +832,7 @@ def MakePBS(PBStemplate, PBSout, PBSsubs, submitJob, rtype='TS'):
             PBStemplate = os.path.abspath(InelasticaDir+'/PBS/'+PBStemplate)
 
     if os.path.exists(PBStemplate):
-        WritePBS(PBStemplate, PBSout, PBSsubs)
+        WritePBS(PBStemplate, PBSout, PBSsubs, use_jinja=use_jinja)
         if submitJob:
             print(PBStemplate)
             workingFolder, PBSfile = os.path.split(os.path.abspath(PBSout))
@@ -835,9 +841,32 @@ def MakePBS(PBStemplate, PBSout, PBSsubs, submitJob, rtype='TS'):
         print("WARNING: Could not find PBS template file", PBStemplate)
 
 
-def WritePBS(PBStemplate, PBSout, PBSsubs):
+def WritePBS(PBStemplate, PBSout, PBSsubs, use_jinja=False):
     print('SetupRuns.WritePBS: Reading', PBStemplate)
     print('SetupRuns.WritePBS: Writing', PBSout)
+
+    if use_jinja:
+        dirlvls = PBSsubs.get("jobname", 2)
+        if isinstance(dirlvls, str):
+            jobname = dirlvls
+        else:
+            assert isinstance(dirlvls, int)
+            try:
+                from pathlib import Path
+            except ImportError:
+                class OldPythonException(Exception):
+                    pass
+                raise OldPythonException(
+                    "Your python does not have pathlib, please upgrade to a recent version.")
+            p = Path(PBSout).parent
+            jobname = []
+            for i in range(dirlvls):
+                jobname.append(p.name)
+                p = p.parent
+            jobname = "-".join(jobname)
+        PBSsubs = dict(PBSsubs)
+        PBSsubs.update(jobname=jobname)
+        return write_pbs_jinja(PBStemplate, PBSout, PBSsubs)
 
     # Make default job name
     fullPath = os.path.split(os.path.abspath(PBSout))[0]
@@ -857,6 +886,13 @@ def WritePBS(PBStemplate, PBSout, PBSsubs):
         outfile.write(line)
     infile.close()
     outfile.close()
+
+
+def write_pbs_jinja(template, outpath, variables):
+    t = j2.get_template(template)
+    text = t.render(**variables)
+    with open(outpath, "w") as f:
+        f.write(text)
 
 
 def SubmitPBS(workingfolder, pbsfile):
