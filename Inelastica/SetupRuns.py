@@ -86,7 +86,7 @@ def SetupCGrun(templateCGrun, newCGrun, NewContactSeparation, AtomsPerLayer,
         print('\nSetupRuns.SetupCGrun: %s already exists. OVERWRITING FILES!!!'\
               %newCGrun)
     # Copy template files
-    CopyInputFiles(templateCGrun, newCGrun, ['.fdf', '.vps', '.psf', 'pbs', '.TSHS'])
+    CopyInputFiles(templateCGrun, newCGrun, ['.fdf', '.vps', '.psf', 'pbs', '.TSHS','.KP'])
     # Read relaxed geometry
     XVfiles = glob.glob(templateCGrun+'/*.XV*')
     if len(XVfiles) == 1:
@@ -168,7 +168,7 @@ def SetupFCrun(CGrun, newFCrun, FCfirst, FClast, displacement=0.02,
         print('\nSetupRuns.SetupFCrun: %s already exists. OVERWRITING FILES!!!'\
               %newFCrun)
     # Copy template files
-    CopyInputFiles(CGrun, newFCrun, ['.fdf', '.vps', '.psf', '.DM', '.XV', '.pbs', '.TSDE', '.TSHS'])
+    CopyInputFiles(CGrun, newFCrun, ['.fdf', '.vps', '.psf', '.DM', '.XV', '.pbs', '.TSDE', '.TSHS', '.KP'])
     # Read relaxed geometry and overwrite STRUCT files
     XVfiles = glob.glob(CGrun+'/*.XV*')
     if len(XVfiles) == 1:
@@ -240,7 +240,7 @@ def SetupOSrun(CGrun, newOSrun, displacement=0.02,
         print('\nSetupRuns.SetupOSrun: %s already exists. OVERWRITING FILES!!!'\
               %newOSrun)
     # Copy files from CGrun
-    CopyInputFiles(CGrun, newOSrun, ['.fdf', '.vps', '.psf'])
+    CopyInputFiles(CGrun, newOSrun, ['.fdf', '.vps', '.psf', '.KP'])
     # Read original RUN.fdf file
     f = open(newOSrun+'/RUN.fdf', 'r')
     lines = f.readlines()
@@ -358,7 +358,7 @@ def SetupTSrun(CGrun, templateTSrun, newTSrun,
         if os.path.isdir(elm):
             CopyTree(elm, newTSrun+'/'+tail, overwrite=overwrite)
     # Copy template files
-    CopyInputFiles(templateTSrun, newTSrun, ['.fdf', '.vps', '.psf', '.pbs'])
+    CopyInputFiles(templateTSrun, newTSrun, ['.fdf', '.vps', '.psf', '.pbs','.KP'])
     # Read relaxed geometry
     XVfiles = glob.glob(CGrun+'/*.XV*')
     if len(XVfiles) == 1:
