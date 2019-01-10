@@ -274,7 +274,8 @@ def SetupOSrun(CGrun, newOSrun, displacement=0.02,
         print('SetupRuns.SetupOSrun: Writing %s' %(newOSrun+'/'+inputfile))
         f = open((newOSrun+'/'+inputfile), 'w')
         f.write('### Lines written %s \n' %time.ctime())
-        print("SolutionMethod transiesta", file=f)
+        # Ensure we don't get lua errors...
+        print("MD.TypeOfRun CG", file=f)
         #f.write('MD.NumCGSteps 0\n')
         #f.write('DM.NumberPulay 0 \n')
         #f.write('MPN.onlyS .true.\n\n')
