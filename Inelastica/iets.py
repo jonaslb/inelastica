@@ -97,6 +97,9 @@ def GetOptions(argv):
                    help='External damping [default: %(default)s (?) TODO check unit!]')
     p.add_argument('-u', '--useSigNC', dest='signc', default=False, action='store_true',
                    help='Use SigNCfiles [default: %(default)s]')
+    p.add_argument("--tbtse", default=False,
+                   help="If given, use tbtrans self-energies (specify 'label.TBT.SE.nc')."
+                   " TBT device region must coincide with that given to Inelastica. (not checked!)")
     p.add_argument('-l', '--etaLead', dest='etaLead', type=float, default=0.0,
                    help='Additional imaginary part added ONLY in the leads (surface GF) [default: %(default)s eV]')
     p.add_argument('--SpectralCutoff', dest='SpectralCutoff', type=float, default=1e-8,
