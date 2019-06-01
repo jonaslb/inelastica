@@ -41,6 +41,7 @@ import Inelastica.NEGF as NEGF
 import Inelastica.io.siesta as SIO
 import Inelastica.MakeGeom as MG
 import Inelastica.math as MM
+from Inelastica.sisl_se import TBTSelfEnergy
 
 
 def GetOptions(argv):
@@ -97,8 +98,8 @@ def GetOptions(argv):
                    help='External damping [default: %(default)s (?) TODO check unit!]')
     p.add_argument('-u', '--useSigNC', dest='signc', default=False, action='store_true',
                    help='Use SigNCfiles [default: %(default)s]')
-    p.add_argument("--tbtse", default=False,
-                   help="If given, use tbtrans self-energies (specify 'label.TBT.SE.nc')."
+    p.add_argument("--tbtse", default="",
+                   help="If given, use tbtrans electrode self-energies (specify 'label.TBT.SE.nc')."
                    " TBT device region must coincide with that given to Inelastica. (not checked!)")
     p.add_argument('-l', '--etaLead', dest='etaLead', type=float, default=0.0,
                    help='Additional imaginary part added ONLY in the leads (surface GF) [default: %(default)s eV]')
@@ -154,12 +155,19 @@ def main(options):
     VfracL = options.VfracL # default is 0.5
     print('Inelastica: Voltage fraction over left-center interface: VfracL =', VfracL)
     # Set up electrodes and device Greens function
-    elecL = NEGF.ElectrodeSelfEnergy(options.fnL, options.NA1L, options.NA2L, options.voltage*VfracL)
-    elecL.scaling = options.scaleSigL
-    elecL.semiinf = options.semiinfL
-    elecR = NEGF.ElectrodeSelfEnergy(options.fnR, options.NA1R, options.NA2R, options.voltage*(VfracL-1.))
-    elecR.scaling = options.scaleSigR
-    elecR.semiinf = options.semiinfR
+    if not options.tbtse:
+        elecL = NEGF.ElectrodeSelfEnergy(options.fnL, options.NA1L, options.NA2L, options.voltage*VfracL)
+        elecL.scaling = options.scaleSigL
+        elecL.semiinf = options.semiinfL
+        elecR = NEGF.ElectrodeSelfEnergy(options.fnR, options.NA1R, options.NA2R, options.voltage*(VfracL-1.))
+        elecR.scaling = options.scaleSigR
+        elecR.semiinf = options.semiinfR
+    else:
+        elecL = TBTSelfEnergy(options.tbtse, 0)
+        elecR = TBTSelfEnergy(options.tbtse, 1)
+        if options.UseBulk:
+            print("WARNING: Overriding UseBulk setting to False because you specified a TBT SE.")
+        options.UseBulk = False
     # Read phonons
     NCfile = NC4.Dataset(options.PhononNetCDF, 'r')
     print('Inelastica: Reading ', options.PhononNetCDF)
