@@ -11,10 +11,10 @@ class TBTSelfEnergy:
     NA1 = 1  # must be defined
     NA2 = 1
 
-    def __init__(self, filename, elec, semiinf=0, scaling=1):
+    def __init__(self, filename, elec, voltage=0, semiinf=0, scaling=1):
         self.tbt = si.get_sile(filename)
         self.elec = elec
-        self.voltage = 0  # hardcoded for now
+        self.voltage = voltage
         self.HS = DummyHS(
             nua=len(np.unique(self.tbt.geom.o2a(self.pivot()))),
             nuo=len(self.tbt.pivot())
@@ -38,5 +38,9 @@ class TBTSelfEnergy:
             raise ValueError("The tbt self-energy does not contain the original hamilton")
         if ispin != 0:
             raise ValueError("Spin support not implemented...")
-        se = self.self_energy(ee, k=list(qp).extend([0]))
-        return se
+        se = self.self_energy(ee-self.voltage, k=list(qp) + [0], sort=True)
+        se_big = np.zeros([self.tbt.no_d] * 2, dtype=np.complex)
+        pvt = self.pivot(in_device=True, sort=True).reshape(-1, 1)
+        # print(f"IM {self.elec} and this is me indices: {pvt}")
+        se_big[pvt, pvt.T] = se
+        return se_big
