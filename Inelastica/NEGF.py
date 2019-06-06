@@ -519,7 +519,8 @@ class ElectrodeSelfEnergy(object):
 
 class GF(object):
 
-    def __init__(self, TSHSfile, elecL, elecR, Bulk=True, DeviceAtoms=[0, 0], BufferAtoms=N.empty((0,))):
+    def __init__(self, TSHSfile, elecL, elecR, Bulk=True, DeviceAtoms=[0, 0], BufferAtoms=N.empty((0,)),
+                 forceNoFold=False):
         """
         Calculate Green's functions etc for TSHSfile connected to left/right
         electrode (class ElectrodeSelfEnergy).
@@ -534,6 +535,8 @@ class GF(object):
         nuoL, nuoR : Size of Sig, Gam
         nuo0, nuoL0, nuoR0 : Non-folded sizes
         FoldedL, FoldedR : True/False
+        forceNoFold : When using externally provided self-energies (ie. from tbtrans) which are in the device region,
+            then Inelastica shouldn't do any folding and should just work with the device region.
         DeviceAtoms : start/end Siesta numbering of atoms included in device
         DeviceOrbs : Start/end of orbitals. Siesta ordering.
         BufferAtoms: A list of buffer atoms
@@ -542,6 +545,7 @@ class GF(object):
         self.HS = SIO.HS(TSHSfile, BufferAtoms=BufferAtoms)
         print('GF: UseBulk=', Bulk)
         self.DeviceAtoms = DeviceAtoms
+        self.forceNoFold = forceNoFold
         if DeviceAtoms[0] <= 1:
             self.DeviceAtoms[0] = 1
             self.FoldedL = False
@@ -552,6 +556,8 @@ class GF(object):
             self.FoldedR = False
         else:
             self.FoldedR = True
+        if forceNoFold:
+            self.FoldedL, self.FoldedR = False, False
         self.DeviceOrbs = [self.HS.lasto[DeviceAtoms[0]-1]+1, self.HS.lasto[DeviceAtoms[1]]]
 
         self.nuo0, self.nuoL0, self.nuoR0 = self.HS.nuo, elecL.NA1*elecL.NA2*elecL.HS.nuo, elecR.NA1*elecR.NA2*elecR.HS.nuo
@@ -719,8 +725,10 @@ class GF(object):
                 eSmH[nuo-nuoR:nuo, nuo-nuoR:nuo] = self.SigR # SGF^1
             else:
                 eSmH[nuo-nuoR:nuo, nuo-nuoR:nuo] = eSmH[nuo-nuoR:nuo, nuo-nuoR:nuo]-self.SigR
+
         self.Gr = LA.inv(eSmH)
         self.Ga = MM.dagger(self.Gr)
+
         # Calculate spectral functions
         if SpectralCutoff > 0.0:
             self.AL = MM.SpectralMatrix(MM.mm(self.Gr[:, 0:nuoL], self.GamL, self.Ga[0:nuoL, :]), cutoff=SpectralCutoff)
@@ -761,11 +769,12 @@ class GF(object):
         if self.HS.gamma:
             self.H0 = self.HS.H[ispin, :, :].copy()
             self.S0 = self.HS.S.copy()
-            # Remove direct left/right coupling
-            self.H0[0:nuoL, nuo-nuoR:nuo] = 0.
-            self.H0[nuo-nuoR:nuo, 0:nuoL] = 0.
-            self.S0[0:nuoL, nuo-nuoR:nuo] = 0.
-            self.S0[nuo-nuoR:nuo, 0:nuoL] = 0.
+            if not self.forceNoFold:
+                # Remove direct left/right coupling
+                self.H0[0:nuoL, nuo-nuoR:nuo] = 0.
+                self.H0[nuo-nuoR:nuo, 0:nuoL] = 0.
+                self.S0[0:nuoL, nuo-nuoR:nuo] = 0.
+                self.S0[nuo-nuoR:nuo, 0:nuoL] = 0.
         else:
             # Do trick with kz
             tmpH, tmpS = self.HS.H[ispin, :, :].copy(), self.HS.S.copy()
@@ -790,10 +799,9 @@ class GF(object):
             self.H0 = 0.5 * (tmpH + self.HS.H[ispin, :, :])
             self.S0 = 0.5 * (tmpS + self.HS.S)
 
-        if self.FoldedL or self.FoldedR:
-            devSt, devEnd = self.DeviceOrbs[0], self.DeviceOrbs[1]
-            self.H = self.H0[devSt-1:devEnd, devSt-1:devEnd]
-            self.S = self.S0[devSt-1:devEnd, devSt-1:devEnd]
+        if self.FoldedL or self.FoldedR or self.forceNoFold:
+            device_region = (slice(self.DeviceOrbs[0] - 1, self.DeviceOrbs[1]),) * 2
+            self.H, self.S = self.H0[device_region], self.S0[device_region]
         else:
             self.H, self.S = self.H0, self.S0
 
