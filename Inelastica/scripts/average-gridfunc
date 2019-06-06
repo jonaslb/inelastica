@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 from __future__ import print_function
 
 import numpy as N
@@ -9,7 +9,7 @@ import Inelastica.physics.constants as PC
 
 
 def average(ncfile, args):
-    """This function writes plane-averaged 1D functions of 
+    """This function writes plane-averaged 1D functions of
     SIESTA gridfunctions such as the ElectrostaticPotential.nc
     on a selected axis"""
     print('Averaging %s on axis %i'%(ncfile.filepath(), args.axis))
