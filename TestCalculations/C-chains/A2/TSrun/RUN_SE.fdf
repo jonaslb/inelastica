@@ -1,0 +1,4 @@
+SystemLabel device
+TBT.SelfEnergy.Save True
+TBT.SelfEnergy.Only True
+%include RUN.fdf
