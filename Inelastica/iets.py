@@ -101,6 +101,13 @@ def GetOptions(argv):
     p.add_argument("--tbtse", default="",
                    help="If given, use tbtrans electrode self-energies (specify 'label.TBT.SE.nc')."
                    " TBT device region must coincide with that given to Inelastica. Requires sisl to be installed.")
+    p.add_argument("--uniteelecs", type=lambda x: list(map(int, x.split(","))),
+                   help="Combine electrodes (only supported with --tbtse, see above). Supply eg. "
+                        "`--uniteelecs 0,1,2` to combine those three electrodes as electrode L. "
+                        "The remaining electrodes will then become united as electrode R. "
+                        "This allows support for multi-electrode setups where still only 2 "
+                        "chemical potentials exist and only transport between the sets are "
+                        "interesting.")
     p.add_argument('-l', '--etaLead', dest='etaLead', type=float, default=0.0,
                    help='Additional imaginary part added ONLY in the leads (surface GF) [default: %(default)s eV]')
     p.add_argument('--SpectralCutoff', dest='SpectralCutoff', type=float, default=1e-8,

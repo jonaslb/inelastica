@@ -210,10 +210,6 @@ def OptionsCheck(opts):
         opts.fnL, opts.NA1L, opts.NA2L, opts.semiinfL = get_elec_vars(block[0][0])
         opts.fnR, opts.NA1R, opts.NA2R, opts.semiinfR = get_elec_vars(block[1][0])
     elif "uniteelecs" in opts and opts.uniteelecs is not None:
-        if len(block) - len(opts.uniteelecs) != 1:
-            print(opts.uniteelecs)
-            print(block)
-            raise Exception("can only unite 1 set of electrodes! and after unite, only 2 must remain")
         # Fill these with Nones, hope they are not being used(!)
         opts.fnL, opts.NA1L, opts.NA2L, opts.semiinfL = [None,]*3 + [0]
         opts.fnR, opts.NA1R, opts.NA2R, opts.semiinfR = [None,]*3 + [0]
