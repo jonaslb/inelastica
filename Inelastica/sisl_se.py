@@ -23,8 +23,8 @@ class TBTSelfEnergy:
             self.elecs = [elecs]
         self.voltage = voltage
         self.HS = DummyHS(
-            nua=len(np.unique(self.tbt.geom.o2a(self.pivot()))),
-            nuo=len(self.tbt.pivot())
+            nua=len(self.tbt.na_d),
+            nuo=len(self.tbt.no_d)
             )
         self.semiinf = semiinf  # Inelastica uses this value (axis/direction) for some kpoint setup hokus pokus
         self.scaling = scaling
