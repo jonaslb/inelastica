@@ -165,8 +165,14 @@ def main(options):
         elecR.scaling = options.scaleSigR
         elecR.semiinf = options.semiinfR
     else:
-        elecL = TBTSelfEnergy(options.tbtse, 0, voltage=VL)
-        elecR = TBTSelfEnergy(options.tbtse, 1, voltage=VR)
+        if not options.uniteelecs:
+            elecL = TBTSelfEnergy(options.tbtse, 0, voltage=VL)
+            elecR = TBTSelfEnergy(options.tbtse, 1, voltage=VR)
+        else:
+            import sisl as si
+            elecs = set(range(len(si.get_sile(options.tbtse).elecs)))
+            elecL = TBTSelfEnergy(options.tbtse, options.uniteelecs, voltage=VL)
+            elecR = TBTSelfEnergy(options.tbtse, elecs.difference(set(options.uniteelecs)), voltage=VR)
         if options.UseBulk:
             print("WARNING: Overriding UseBulk setting to False because you specified a TBT SE.")
         options.UseBulk = False
