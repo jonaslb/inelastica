@@ -28,6 +28,8 @@ class TBTSelfEnergy:
             )
         self.semiinf = semiinf  # Inelastica uses this value (axis/direction) for some kpoint setup hokus pokus
         self.scaling = scaling
+        print(f"Created a sisl-loaded SelfEnergy from {filename} with electrodes"
+              f" {[self.tbt.elecs[e] for e in self.elecs]}, voltage={self.voltage}.")
 
     # def self_energy(self, *args, **kwargs):
     #     return self.scaling * self.tbt.self_energy(self.elec, *args, **kwargs)
@@ -51,7 +53,7 @@ class TBTSelfEnergy:
             se = self.tbt.self_energy(elec, ee-self.voltage, k=list(qp) + [0])
             se *= self.scaling
             pvt = self.tbt.pivot(elec, in_device=True).reshape(-1, 1)
-            se_big[pvt, pvt.T] = se
+            se_big[pvt, pvt.T] += se
 
         return se_big
 
