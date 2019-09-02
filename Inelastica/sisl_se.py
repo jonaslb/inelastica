@@ -30,6 +30,8 @@ class TBTSelfEnergy:
         self.scaling = scaling
         print(f"Created a sisl-loaded SelfEnergy from {filename} with electrodes"
               f" {[self.tbt.elecs[e] for e in self.elecs]}, voltage={self.voltage}.")
+        self.orbs = np.unique(np.concatenate([self.tbt.pivot(e, in_device=True) for e in self.elecs]))
+        print(f"    This self-energy lives on orbitals (in-device basis) {si.utils.list2str(self.orbs)}")
 
     # def self_energy(self, *args, **kwargs):
     #     return self.scaling * self.tbt.self_energy(self.elec, *args, **kwargs)
