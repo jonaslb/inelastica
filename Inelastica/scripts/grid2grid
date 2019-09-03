@@ -83,7 +83,7 @@ def writecube(fn, YY, nx, ny, nz, cell, geom):
     anr=geom.anr
     cellB = cell/PC.Bohr2Ang
 
-    foR=file(fn, 'w')
+    foR = open(fn, 'w')
     foR.write('Grid data\n%s\n'%fn)
     foR.write('%i %f %f %f\n'% (len(xyz), 0, 0, 0))
     foR.write('%i %f %f %f\n'% (nx, cell[0, 0]/nx, cell[0, 1]/nx, cell[0, 2]/nx))
