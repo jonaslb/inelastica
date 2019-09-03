@@ -27,8 +27,6 @@ PARALLEL_DIST
 *.bands
 *.bib
 fdf-*.log
-*.mpn.ion
-*.mpn.ion.xml
 *.ion
 *.ion.nc
 *.ion.xml
@@ -41,4 +39,3 @@ fdf-*.log
 *.TBT.*
 time.json
 INPUT_TMP.*
-C-chains/A*/v*
