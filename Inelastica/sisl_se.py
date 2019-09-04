@@ -35,7 +35,7 @@ class TBTSelfEnergy:
             np.concatenate([self.tbt.pivot(e, sort=True) for e in self.elecs])
             )
         print(f"    This self-energy lives on orbitals (full geom basis) {si.utils.list2str(self.orbs)}")
-        self.atoms = self.tbt.o2a(self.orbs, unique=True)
+        self.atoms = self.tbt.geom.o2a(self.orbs, unique=True)
         print(f"    - corresponding to atoms {si.utils.list2str(self.atoms)}")
 
     # def self_energy(self, *args, **kwargs):
