@@ -52,7 +52,7 @@ class TBTSelfEnergy:
         se_big = np.zeros([self.tbt.no_d] * 2, dtype=np.complex)
 
         for elec in self.elecs:
-            se = self.tbt.self_energy(elec, ee-self.voltage, k=list(qp) + [0])
+            se = self.tbt.self_energy(elec, ee-self.voltage, k=list(qp) + [0], sort=True)
             se *= self.scaling
             pvt = self.tbt.pivot(elec, in_device=True).reshape(-1, 1)
             se_big[pvt, pvt.T] += se
