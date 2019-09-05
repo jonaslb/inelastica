@@ -502,11 +502,11 @@ class DynamicalMatrix(object):
             Udisp[:, i] = U[:, i] / self.Masses[i // 3]**.5
 
         # Compute displacement vectors scaled for the characteristic length
-        Ucl = PC.hbar2SI * N.sqrt(
+        Ucl = N.zeros_like(U)
+        Ucl[hw > 0, :] = PC.hbar2SI * N.sqrt(
             N.array(self.Masses).repeat(3).reshape(1, -1) * PC.amu2kg
-            * hw.reshape(-1, 1) * PC.eV2Joule
-            )**-1 * 1e10 * U
-        Ucl[hw < 0, :] = 0
+            * hw[hw > 0].reshape(-1, 1) * PC.eV2Joule
+            )**-1 * 1e10 * U[hw > 0, :]
 
         # Expand vectors to full geometry
         UU = N.zeros((len(hw), self.geom.natoms, 3), N.complex)
