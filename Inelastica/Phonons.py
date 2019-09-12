@@ -447,7 +447,7 @@ class DynamicalMatrix(object):
             for j in range(3):
                 FC[i, j, v-1, :] = 0.0
                 FC[i, j, v-1, :] = -N.sum(FC[i, j], axis=0)
-        print('Total sumrule change in FC: %.3e eV/Ang^2' % N.sum(abs(FC0)-abs(FC)))
+        print('Total sumrule change in FC: %.3e eV/Ang^2' % N.sum(N.abs(FC0-FC)))
         return FC
 
     def ComputePhononModes(self, FC, verbose=True):
