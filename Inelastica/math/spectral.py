@@ -24,16 +24,16 @@ def mm(*args, trace=False):
     """ Matrix multiplication with numpy einsum. """
     operands = []
     alphabet = [chr(i) for i in range(97, 123)]
-    op_index = []
+    op_index = []  # ["ab", "bc", "cd", ...]
     for op in args:
         if isinstance(op, SpectralMatrix):
             operands.append(op.L)
-            op_index.append(alphabet.pop() + alphabet.pop())
+            op_index.append(alphabet.pop() + alphabet[0])
             operands.append(op.R)
-            op_index.append(alphabet.pop() + alphabet.pop())
+            op_index.append(alphabet.pop() + alphabet[0])
         else:
             operands.append(op)
-            op_index.append(alphabet.pop() + alphabet.pop())
+            op_index.append(alphabet.pop() + alphabet[0])
     indices = ",".join(op_index)
     if trace:
         # The first and last indices should then be the same
