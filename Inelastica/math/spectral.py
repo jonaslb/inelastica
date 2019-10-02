@@ -28,16 +28,19 @@ def mm(*args, trace=False):
     for op in args:
         if isinstance(op, SpectralMatrix):
             operands.append(op.L)
-            op_index.append(alphabet.pop() + alphabet[0])
+            op_index.append(alphabet.pop(0) + alphabet[0])
             operands.append(op.R)
-            op_index.append(alphabet.pop() + alphabet[0])
+            op_index.append(alphabet.pop(0) + alphabet[0])
         else:
             operands.append(op)
-            op_index.append(alphabet.pop() + alphabet[0])
+            op_index.append(alphabet.pop(0) + alphabet[0])
     indices = ",".join(op_index)
     if trace:
         # The first and last indices should then be the same
         indices = indices[:-1] + indices[0]
+    # else:
+    # using __mm is the same speed it seems. But use einsum anyway (should be faster for trace)
+    #     return __mm(operands)
     return N.einsum(indices, *operands, optimize="greedy")
 
 

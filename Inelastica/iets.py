@@ -42,6 +42,7 @@ import Inelastica.io.siesta as SIO
 import Inelastica.MakeGeom as MG
 import Inelastica.math as MM
 from Inelastica.sisl_se import TBTSelfEnergy
+from datetime import datetime
 
 
 def GetOptions(argv):
@@ -237,6 +238,7 @@ def main(options):
     # Check consistency of PHrun vs TSrun inputs
     IntegrityCheck(options, GFp, NCfile)
     # Calculate trace factors one mode at a time
+    ihw_relevant = (hw > options.modeCutoff).nonzero()[0]
     print('Inelastica: LOEscale =', options.LOEscale)
     if options.LOEscale == 0.0:
         # LOEscale=0.0 => Original LOE-WBA method, PRB 72, 201101(R) (2005) [cond-mat/0505473].
@@ -244,13 +246,15 @@ def main(options):
                    etaLead=options.etaLead, useSigNCfiles=options.signc, SpectralCutoff=options.SpectralCutoff)
         GFm.calcGF(options.energy+options.eta*1.0j, options.kpoint[0:2], ispin=options.iSpin,
                    etaLead=options.etaLead, useSigNCfiles=options.signc, SpectralCutoff=options.SpectralCutoff)
-        for ihw in (hw > options.modeCutoff).nonzero()[0]:
+        for i_ihw, ihw in enumerate(ihw_relevant):
+            print(f"{datetime.now():%H:%M:%S}: Mode {i_ihw}/{len(ihw_relevant)} ({ihw})...", flush=True)
             calcTraces(options, GFp, GFm, basis, NCfile, ihw)
             calcTraces(options, GFm, GFp, basis, NCfile, ihw)
         writeFGRrates(options, GFp, hw, NCfile)
     else:
         # LOEscale=1.0 => Generalized LOE, PRB 89, 081405(R) (2014) [arXiv:1312.7625]
-        for ihw in (hw > options.modeCutoff).nonzero()[0]:
+        for i_ihw, ihw in enumerate(ihw_relevant):
+            print(f"{datetime.now():%H:%M:%S}: Mode {i_ihw}/{len(ihw_relevant)} ({ihw})...", flush=True)
             GFp.calcGF(options.energy+hw[ihw]*options.LOEscale*VfracL+options.eta*1.0j, options.kpoint[0:2], ispin=options.iSpin,
                        etaLead=options.etaLead, useSigNCfiles=options.signc, SpectralCutoff=options.SpectralCutoff)
             GFm.calcGF(options.energy+hw[ihw]*options.LOEscale*(VfracL-1.)+options.eta*1.0j, options.kpoint[0:2], ispin=options.iSpin,
@@ -358,11 +362,13 @@ def calcTraces(options, GF1, GF2, basis, NCfile, ihw):
     # Calculate various traces over the electronic structure
     # Electron-phonon couplings
     ihw = int(ihw)
-    M = N.array(NCfile.variables['He_ph'][ihw, options.iSpin, :, :], N.complex)
-    try:
-        M += 1.j*N.array(NCfile.variables['ImHe_ph'][ihw, options.iSpin, :, :], N.complex)
-    except:
+    M = NCfile.variables['He_ph'][ihw, options.iSpin, :, :]
+    if "ImHe_ph" not in NCfile.variables:
         print('Warning: Variable ImHe_ph not found')
+    else:
+        M = M.astype(complex)
+        M.imag = NCfile.variables['ImHe_ph'][ihw, options.iSpin, :, :]
+
     # Calculation of intermediate quantity
     # MARGLGM = MM.mm()  # these were inserted into t1 and t2
     # MARGLGM2 = MM.mm()

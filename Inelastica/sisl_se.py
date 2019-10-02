@@ -1,4 +1,5 @@
 from collections import namedtuple
+from functools import lru_cache
 import numpy as np
 try:
     import sisl as si
@@ -38,11 +39,19 @@ class TBTSelfEnergy:
         self.atoms = self.tbt.geom.o2a(self.orbs, unique=True)
         print(f"    - corresponding to atoms {si.utils.list2str(self.atoms)}")
 
+        # inelastica likes to repeat calls especially for ee=0+i*zeta
+        self._se_hashable = lru_cache(maxsize=4)(self._se_hashable_nolru)
+
     # def self_energy(self, *args, **kwargs):
     #     return self.scaling * self.tbt.self_energy(self.elec, *args, **kwargs)
     #
     # def pivot(self, *args, **kwargs):
     #     return self.tbt.pivot(self.elec, *args, **kwargs)
+
+    def _se_hashable_nolru(self, elec, ee, k, sort):
+        # print("_se_hashable called,", elec)
+        ee = np.array(ee)
+        return self.tbt.self_energy(elec, ee-self.voltage, k=k, sort=sort)
 
     def getSig(self, ee,
                qp=[0, 0], left=True,
@@ -50,6 +59,7 @@ class TBTSelfEnergy:
                etaLead=0.0, useSigNCfiles=False,
                ):
         """Imitate the Inelastica.NEGF.SelfEnergy.getSig function."""
+        # print("getSig", self.elecs, "called: ", ee, qp, left, Bulk, etaLead, useSigNCfiles)
         if Bulk:
             raise ValueError("The tbt self-energy does not contain the original hamilton")
         if ispin != 0:
@@ -57,7 +67,8 @@ class TBTSelfEnergy:
         se_big = np.zeros([self.tbt.no_d] * 2, dtype=np.complex)
 
         for elec in self.elecs:
-            se = self.tbt.self_energy(elec, ee-self.voltage, k=list(qp) + [0], sort=True)
+            # se = self.tbt.self_energy(elec, ee-self.voltage, k=list(qp) + [0], sort=True)
+            se = self._se_hashable(elec, ee-self.voltage, k=tuple(list(qp) + [0]), sort=True)
             se *= self.scaling
             pvt = self.tbt.pivot(elec, in_device=True, sort=True).reshape(-1, 1)
             se_big[pvt, pvt.T] += se
