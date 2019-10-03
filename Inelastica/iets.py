@@ -425,14 +425,14 @@ def calcTraces(options, GF1, GF2, basis, NCfile, ihw):
         tmp2 = MM.mm(MARGL, GF1.Gr, M, GF1.Gr, GF1.GammaR)
         tmp = tmp1+tmp2
         tmp = tmp + MM.dagger(tmp)
-        Qlambda = MM.mm(-GF1.Ga, GF1.GammaL, GF1.Gr, tmp)
+        Qlambda = MM.trace(-GF1.Ga, GF1.GammaL, GF1.Gr, tmp)
         tmp = -2*TT
         OneMinusTwoT = tmp+N.identity(len(GF1.GammaL))
         # Store relevant traces
         GF1.dIel[ihw] = NEGF.AssertReal(MM.trace(Tlambda0), 'dIel[%i]'%ihw)
         GF1.dIinel[ihw] = NEGF.AssertReal(MM.trace(Tlambda1), 'dIinel[%i]'%ihw)
-        GF1.dSel[ihw] = NEGF.AssertReal(MM.trace(MM.mm(OneMinusTwoT, Tlambda0)), 'dSel[%i]'%ihw)
-        GF1.dSinel[ihw] = NEGF.AssertReal(MM.trace(Qlambda+MM.mm(OneMinusTwoT, Tlambda1)), 'dSinel[%i]'%ihw)
+        GF1.dSel[ihw] = NEGF.AssertReal(MM.trace(OneMinusTwoT, Tlambda0), 'dSel[%i]'%ihw)
+        GF1.dSinel[ihw] = NEGF.AssertReal(Qlambda+MM.trace(OneMinusTwoT, Tlambda1), 'dSinel[%i]'%ihw)
 
 
 def calcIETS(options, GFp, GFm, basis, hw):
