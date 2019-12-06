@@ -370,26 +370,32 @@ def calcTraces(options, GF1, GF2, basis, NCfile, ihw):
         M.imag = NCfile.variables['ImHe_ph'][ihw, options.iSpin, :, :]
 
     # Calculation of intermediate quantity
-    # MARGLGM = MM.mm()  # these were inserted into t1 and t2
-    # MARGLGM2 = MM.mm()
+    MAL1 = MM.mm(M, GF1.AL)
+    MAL2 = MM.mm(M, GF2.AL)
+    MAR1 = MM.mm(M, GF1.AR)
+    MAR2 = MM.mm(M, GF2.AR)
     # LOE expressions in compact form
-    t1 = MM.trace(M, GF1.ARGLG, M, GF2.AR)
-    t2 = MM.trace(M, GF2.ARGLG, M, GF1.AL)
+    t1 = MM.trace(M, GF1.ARGLG, MAR2)
+    t2 = MM.trace(M, GF2.ARGLG, MAL1)
     # Note that compared with Eq. (10) of PRB89, 081405 (2014) we here use
     # the definition B_lambda = MM.trace(t1-dagger(t2)), which in turn gives
     # ReB = MM.trace(t1).real-MM.trace(t2).real
     # ImB = MM.trace(t1).imag+MM.trace(t2).imag
     K23 = t1.imag+t2.imag
-    K4 = MM.trace(M, GF1.ALT, M, GF2.AR)
+    K4 = MM.trace(M, GF1.ALT, MAR2)
     aK23 = 2*(t1.real-t2.real) # asymmetric part
     # Non-Hilbert term defined here with a minus sign
     GF1.nHT[ihw] = NEGF.AssertReal(K23+K4, 'nHT[%i]'%ihw)
     GF1.HT[ihw] = NEGF.AssertReal(aK23, 'HT[%i]'%ihw)
     # Power, damping and current rates
-    GF1.P1T[ihw] = NEGF.AssertReal(MM.trace(M, GF1.A, M, GF2.A), 'P1T[%i]'%ihw)
-    GF1.P2T[ihw] = NEGF.AssertReal(MM.trace(M, GF1.AL, M, GF2.AR), 'P2T[%i]'%ihw)
-    GF1.ehDampL[ihw] = NEGF.AssertReal(MM.trace(M, GF1.AL, M, GF2.AL), 'ehDampL[%i]'%ihw)
-    GF1.ehDampR[ihw] = NEGF.AssertReal(MM.trace(M, GF1.AR, M, GF2.AR), 'ehDampR[%i]'%ihw)
+    # GF1.P1T[ihw] = NEGF.AssertReal(MM.trace(M, GF1.A, M, GF2.A), 'P1T[%i]'%ihw)  # see below
+    GF1.P2T[ihw] = NEGF.AssertReal(MM.trace(MAL1, MAR2), 'P2T[%i]'%ihw)
+    GF1.ehDampL[ihw] = NEGF.AssertReal(MM.trace(MAL1, MAL2), 'ehDampL[%i]'%ihw)
+    GF1.ehDampR[ihw] = NEGF.AssertReal(MM.trace(MAR1, MAR2), 'ehDampR[%i]'%ihw)
+    GF1.P1T[ihw] = (  # optimized to use the others (as A=AL+AR)
+        GF1.P2T[ihw] + GF1.ehDampL[ihw] + GF1.ehDampR[ihw]
+        + NEGF.AssertReal(MM.trace(MAR1, MAL2), 'P_R1L2[%i]'%ihw)
+    )
     # Remains from older version (see before rev. 219):
     #GF.dGnout.append(EC.calcCurrent(options,basis,GF.HNO,mm(Us,-0.5j*(tmp1-dagger(tmp1)),Us)))
     #GF.dGnin.append(EC.calcCurrent(options,basis,GF.HNO,mm(Us,mm(G,MA1M,Gd)-0.5j*(tmp2-dagger(tmp2)),Us)))
