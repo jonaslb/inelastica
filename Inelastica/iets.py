@@ -358,17 +358,30 @@ def IntegrityCheck(options, GF, NCfile):
         sys.exit('Inelastica: Error - inconsistency detected for device region.\n')
 
 
+def get_coupling(ncfile, ihw, ispin):
+    ihw = int(ihw)
+    dims = ncfile.dimensions
+    vars = ncfile.variables
+    norb = len(dims["norb"])
+    eph = np.arange(norb).reshape(-1, 1)
+    if "norb_eph" in dims:
+        eph = vars["eph_orbs_in_dev"][:].data.reshape(-1, 1)
+
+    dtype = complex if "ImHe_ph" in vars else float
+    M = np.zeros((norb, norb), dtype=dtype)
+    M.real[eph, eph.T] = vars['He_ph'][ihw, ispin, :, :]
+    if "ImHe_ph" not in vars:
+        print('Warning: Variable ImHe_ph not found')
+    else:
+        M.imag[eph, eph.T] = vars['ImHe_ph'][ihw, ispin, :, :]
+    return M
+
+
 def calcTraces(options, GF1, GF2, basis, NCfile, ihw):
     # Calculate various traces over the electronic structure
     # Electron-phonon couplings
     ihw = int(ihw)
-    M = NCfile.variables['He_ph'][ihw, options.iSpin, :, :]
-    if "ImHe_ph" not in NCfile.variables:
-        print('Warning: Variable ImHe_ph not found')
-    else:
-        M = M.astype(complex)
-        M.imag = NCfile.variables['ImHe_ph'][ihw, options.iSpin, :, :]
-
+    M = get_coupling(NCfile, ihw, options.iSpin)
     # Calculation of intermediate quantity
     MAL1 = MM.mm(M, GF1.AL)
     MAL2 = MM.mm(M, GF2.AL)
@@ -694,11 +707,7 @@ def writeFGRrates(options, GF, hw, NCfile):
 
     for ihw in range(len(hw)):
         SIO.printDone(ihw, len(hw), 'Golden Rate')
-        M = N.array(NCfile.variables['He_ph'][ihw, options.iSpin, :, :], N.complex)
-        try:
-            M += 1.j*N.array(NCfile.variables['ImHe_ph'][ihw, options.iSpin, :, :], N.complex)
-        except:
-            print('Warning: Variable ImHe_ph not found')
+        M = get_coupling(NCfile, ihw, options.iSpin)
         rate = N.zeros((len(GF.ECleft), len(GF.ECright)), N.float)
         totrate = 0.0
         inter, intra = 0.0, 0.0 # splitting total rate in two
