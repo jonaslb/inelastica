@@ -363,12 +363,12 @@ def get_coupling(ncfile, ihw, ispin):
     dims = ncfile.dimensions
     vars = ncfile.variables
     norb = len(dims["norb"])
-    eph = np.arange(norb).reshape(-1, 1)
+    eph = N.arange(norb).reshape(-1, 1)
     if "norb_eph" in dims:
         eph = vars["eph_orbs_in_dev"][:].data.reshape(-1, 1)
 
     dtype = complex if "ImHe_ph" in vars else float
-    M = np.zeros((norb, norb), dtype=dtype)
+    M = N.zeros((norb, norb), dtype=dtype)
     M.real[eph, eph.T] = vars['He_ph'][ihw, ispin, :, :]
     if "ImHe_ph" not in vars:
         print('Warning: Variable ImHe_ph not found')
