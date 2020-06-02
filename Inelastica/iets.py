@@ -380,7 +380,7 @@ def get_coupling(ncfile, ihw, ispin):
     return M
 
 
-def calcTraces(options, GF1, GF2, basis, NCfile, ihw):
+def calcTraces(options, GF1, GF2, basis, NCfile, ihw, recycle=None):
     # Calculate various traces over the electronic structure
     # Electron-phonon couplings
     ihw = int(ihw)
