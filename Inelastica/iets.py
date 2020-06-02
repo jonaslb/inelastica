@@ -391,9 +391,10 @@ def calcTraces(options, GF1, GF2, basis, NCfile, ihw):
         Tlambda0 = MM.mm(GF1.GammaL, tmp)
         tmp1 = MM.mm(MAR, M)
         GrGammaR = MM.mm(GF1.Gr, GF1.GammaR)
+        GammaLGr = MM.mm(GF1.GammaL, GF1.Gr)
         tmp2 = MM.mm(M, GF1.A, M, GrGammaR)
         tmp = tmp1+1j/2.*(MM.dagger(tmp2)-tmp2)
-        Tlambda1 = MM.mm(GF1.GammaL, GF1.Gr, tmp, GF1.Ga)
+        Tlambda1 = MM.mm(GammaLGr, tmp, GF1.Ga)
         MARGL = MM.mm(MAR, GF1.GammaL)
         del MAR
         tmp1 = MM.mm(MARGL, GF1.AR, M)
@@ -402,7 +403,7 @@ def calcTraces(options, GF1, GF2, basis, NCfile, ihw):
         tmp = tmp1 + tmp2
         del tmp1, tmp2
         tmp = tmp + MM.dagger(tmp)
-        Qlambda = -MM.trace(GF1.Ga, GF1.GammaL, GF1.Gr, tmp)
+        Qlambda = -MM.trace(GF1.Ga, GammaLGr, tmp)
         tmp = -2*TT
         OneMinusTwoT = tmp+N.identity(len(GF1.GammaL))
         # Store relevant traces
