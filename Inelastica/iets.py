@@ -713,7 +713,7 @@ def writeFGRrates(options, GF, hw, NCfile):
         inter, intra = 0.0, 0.0 # splitting total rate in two
         for iL in range(len(GF.ECleft)):
             for iR in range(len(GF.ECright)):
-                tmp = N.dot(N.conjugate(GF.ECleft[iL]), MM.mm(M, GF.ECright[iR]))
+                tmp = N.conjugate(GF.ECleft[iL]).dot(M.dot(GF.ECright[iR]))
                 rate[iL, iR] = (2*N.pi)**2*abs(tmp)**2
                 totrate += rate[iL, iR]
                 if iL == iR: intra += rate[iL, iR]
