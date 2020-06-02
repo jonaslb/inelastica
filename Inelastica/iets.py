@@ -416,14 +416,20 @@ def calcTraces(options, GF1, GF2, basis, NCfile, ihw):
 
     if options.LOEscale == 0.0:
         # Check against original LOE-WBA formulation
-        isym1 = MM.mm(GF1.ALT, M, GF2.AR, M)
-        isym2 = MM.mm(MM.dagger(GF1.ARGLG), M, GF2.A, M)
-        isym3 = MM.mm(GF1.ARGLG, M, GF2.A, M)
-        isym = MM.trace(isym1)+1j/2.*(MM.trace(isym2)-MM.trace(isym3))
+        isym1 = MM.trace(GF1.ALT, M, GF2.AR, M)
+        gf2am = MM.mm(GF2.A, M)
+        gf1_dagarglg_m = MM.mm(MM.dagger(GF1.ARGLG), M)
+        gf1_arglg_m = MM.mm(GF1.ARGLG, M)
+        isym2 = MM.trace(gf1_dagarglg_m, gf2am)
+        isym3 = MM.trace(gf1_arglg_m, gf2am)
+        del gf2am
+        isym = isym1+1j/2.*(isym2-isym3)
         print('LOE-WBA check: Isym diff', K23+K4-isym)
-        iasym1 = MM.mm(MM.dagger(GF1.ARGLG), M, GF2.AR-GF2.AL, M)
-        iasym2 = MM.mm(GF1.ARGLG, M, GF2.AR-GF2.AL, M)
-        iasym = MM.trace(iasym1)+MM.trace(iasym2)
+        gf2_ar_al_M = MM.mm(GF2.AR-GF2.AL, M)
+        iasym1 = MM.trace(gf1_dagarglg_m, gf2_ar_al_M)
+        iasym2 = MM.trace(gf1_arglg_m, gf2_ar_al_M)
+        iasym = iasym1+iasym2
+        del gf1_dagarglg_m, gf1_arglg_m
         print('LOE-WBA check: Iasym diff', aK23-iasym)
 
         # Compute inelastic shot noise terms according to the papers
@@ -432,19 +438,26 @@ def calcTraces(options, GF1, GF2, basis, NCfile, ihw):
         # Zero-temperature limit
         TT = MM.mm(GF1.GammaL, GF1.AR) # this matrix has the correct shape for MM
         ReGr = (GF1.Gr+GF1.Ga)/2.
-        tmp = MM.mm(GF1.Gr, M, ReGr, M, GF1.AR)
+        Gf1GrM = MM.mm(GF1.Gr, M)
+        MAR = MM.mm(M, GF1.AR)
+        tmp = MM.mm(Gf1GrM, ReGr, MAR)
+        del ReGr
         tmp = tmp+MM.dagger(tmp)
         Tlambda0 = MM.mm(GF1.GammaL, tmp)
-        tmp1 = MM.mm(M, GF1.AR, M)
-        tmp2 = MM.mm(M, GF1.A, M, GF1.Gr, GF1.GammaR)
+        tmp1 = MM.mm(MAR, M)
+        GrGammaR = MM.mm(GF1.Gr, GF1.GammaR)
+        tmp2 = MM.mm(M, GF1.A, M, GrGammaR)
         tmp = tmp1+1j/2.*(MM.dagger(tmp2)-tmp2)
         Tlambda1 = MM.mm(GF1.GammaL, GF1.Gr, tmp, GF1.Ga)
-        MARGL = MM.mm(M, GF1.AR, GF1.GammaL)
+        MARGL = MM.mm(MAR, GF1.GammaL)
+        del MAR
         tmp1 = MM.mm(MARGL, GF1.AR, M)
-        tmp2 = MM.mm(MARGL, GF1.Gr, M, GF1.Gr, GF1.GammaR)
-        tmp = tmp1+tmp2
+        tmp2 = MM.mm(MARGL, Gf1GrM, GrGammaR)
+        del Gf1GrM, GrGammaR, MARGL
+        tmp = tmp1 + tmp2
+        del tmp1, tmp2
         tmp = tmp + MM.dagger(tmp)
-        Qlambda = MM.trace(-GF1.Ga, GF1.GammaL, GF1.Gr, tmp)
+        Qlambda = -MM.trace(GF1.Ga, GF1.GammaL, GF1.Gr, tmp)
         tmp = -2*TT
         OneMinusTwoT = tmp+N.identity(len(GF1.GammaL))
         # Store relevant traces
