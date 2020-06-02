@@ -240,16 +240,19 @@ def main(options):
     # Calculate trace factors one mode at a time
     ihw_relevant = (hw > options.modeCutoff).nonzero()[0]
     print('Inelastica: LOEscale =', options.LOEscale)
+    
     if options.LOEscale == 0.0:
         # LOEscale=0.0 => Original LOE-WBA method, PRB 72, 201101(R) (2005) [cond-mat/0505473].
         GFp.calcGF(options.energy+options.eta*1.0j, options.kpoint[0:2], ispin=options.iSpin,
                    etaLead=options.etaLead, useSigNCfiles=options.signc, SpectralCutoff=options.SpectralCutoff)
         GFm.calcGF(options.energy+options.eta*1.0j, options.kpoint[0:2], ispin=options.iSpin,
                    etaLead=options.etaLead, useSigNCfiles=options.signc, SpectralCutoff=options.SpectralCutoff)
+        recycle_p = dict()
+        recycle_m = dict()
         for i_ihw, ihw in enumerate(ihw_relevant):
-            print(f"{datetime.now():%H:%M:%S}: Mode {i_ihw}/{len(ihw_relevant)} ({ihw})...", flush=True)
-            calcTraces(options, GFp, GFm, basis, NCfile, ihw)
-            calcTraces(options, GFm, GFp, basis, NCfile, ihw)
+            print(f"{datetime.now():%H:%M:%S}: Mode {i_ihw}/{len(ihw_relevant)} ({ihw})...", flush=True)	
+            calcTraces(options, GFp, GFm, basis, NCfile, ihw, recycle=recycle_p)
+            calcTraces(options, GFm, GFp, basis, NCfile, ihw, recycle=recycle_m)
         writeFGRrates(options, GFp, hw, NCfile)
     else:
         # LOEscale=1.0 => Generalized LOE, PRB 89, 081405(R) (2014) [arXiv:1312.7625]
@@ -383,32 +386,26 @@ def calcTraces(options, GF1, GF2, basis, NCfile, ihw):
     ihw = int(ihw)
     M = get_coupling(NCfile, ihw, options.iSpin)
     # Calculation of intermediate quantity
-    MAL1 = MM.mm(M, GF1.AL)
-    MAL2 = MM.mm(M, GF2.AL)
-    MAR1 = MM.mm(M, GF1.AR)
-    MAR2 = MM.mm(M, GF2.AR)
+    # MARGLGM = MM.mm()  # these were inserted into t1 and t2
+    # MARGLGM2 = MM.mm()
     # LOE expressions in compact form
-    t1 = MM.trace(M, GF1.ARGLG, MAR2)
-    t2 = MM.trace(M, GF2.ARGLG, MAL1)
+    t1 = MM.trace(M, GF1.ARGLG, M, GF2.AR)
+    t2 = MM.trace(M, GF2.ARGLG, M, GF1.AL)
     # Note that compared with Eq. (10) of PRB89, 081405 (2014) we here use
     # the definition B_lambda = MM.trace(t1-dagger(t2)), which in turn gives
     # ReB = MM.trace(t1).real-MM.trace(t2).real
     # ImB = MM.trace(t1).imag+MM.trace(t2).imag
     K23 = t1.imag+t2.imag
-    K4 = MM.trace(M, GF1.ALT, MAR2)
+    K4 = MM.trace(M, GF1.ALT, M, GF2.AR)
     aK23 = 2*(t1.real-t2.real) # asymmetric part
     # Non-Hilbert term defined here with a minus sign
     GF1.nHT[ihw] = NEGF.AssertReal(K23+K4, 'nHT[%i]'%ihw)
     GF1.HT[ihw] = NEGF.AssertReal(aK23, 'HT[%i]'%ihw)
     # Power, damping and current rates
-    # GF1.P1T[ihw] = NEGF.AssertReal(MM.trace(M, GF1.A, M, GF2.A), 'P1T[%i]'%ihw)  # see below
-    GF1.P2T[ihw] = NEGF.AssertReal(MM.trace(MAL1, MAR2), 'P2T[%i]'%ihw)
-    GF1.ehDampL[ihw] = NEGF.AssertReal(MM.trace(MAL1, MAL2), 'ehDampL[%i]'%ihw)
-    GF1.ehDampR[ihw] = NEGF.AssertReal(MM.trace(MAR1, MAR2), 'ehDampR[%i]'%ihw)
-    GF1.P1T[ihw] = (  # optimized to use the others (as A=AL+AR)
-        GF1.P2T[ihw] + GF1.ehDampL[ihw] + GF1.ehDampR[ihw]
-        + NEGF.AssertReal(MM.trace(MAR1, MAL2), 'P_R1L2[%i]'%ihw)
-    )
+    GF1.P1T[ihw] = NEGF.AssertReal(MM.trace(M, GF1.A, M, GF2.A), 'P1T[%i]'%ihw)
+    GF1.P2T[ihw] = NEGF.AssertReal(MM.trace(M, GF1.AL, M, GF2.AR), 'P2T[%i]'%ihw)
+    GF1.ehDampL[ihw] = NEGF.AssertReal(MM.trace(M, GF1.AL, M, GF2.AL), 'ehDampL[%i]'%ihw)
+    GF1.ehDampR[ihw] = NEGF.AssertReal(MM.trace(M, GF1.AR, M, GF2.AR), 'ehDampR[%i]'%ihw)
     # Remains from older version (see before rev. 219):
     #GF.dGnout.append(EC.calcCurrent(options,basis,GF.HNO,mm(Us,-0.5j*(tmp1-dagger(tmp1)),Us)))
     #GF.dGnin.append(EC.calcCurrent(options,basis,GF.HNO,mm(Us,mm(G,MA1M,Gd)-0.5j*(tmp2-dagger(tmp2)),Us)))
@@ -436,7 +433,15 @@ def calcTraces(options, GF1, GF2, basis, NCfile, ihw):
         # Haupt, Novotny & Belzig, PRB 82, 165441 (2010) and
         # Avriller & Frederiksen, PRB 86, 155411 (2012)
         # Zero-temperature limit
-        TT = MM.mm(GF1.GammaL, GF1.AR) # this matrix has the correct shape for MM
+        if recycle is not None:
+            if "TT" not in recycle:
+                recycle["TT"] = MM.mm(GF1.GammaL, GF1.AR)
+            if "GrGammas" not in recycle:
+                GrGammaR = MM.mm(GF1.Gr, GF1.GammaR)
+                GammaLGr = MM.mm(GF1.GammaL, GF1.Gr)
+                recycle["GrGammas"] = (GrGammaR, GammaLGr)
+            TT = recycle["TT"]
+            GrGammaR, GammaLGr = recycle["GrGammas"]
         ReGr = (GF1.Gr+GF1.Ga)/2.
         Gf1GrM = MM.mm(GF1.Gr, M)
         MAR = MM.mm(M, GF1.AR)
@@ -445,8 +450,6 @@ def calcTraces(options, GF1, GF2, basis, NCfile, ihw):
         tmp = tmp+MM.dagger(tmp)
         Tlambda0 = MM.mm(GF1.GammaL, tmp)
         tmp1 = MM.mm(MAR, M)
-        GrGammaR = MM.mm(GF1.Gr, GF1.GammaR)
-        GammaLGr = MM.mm(GF1.GammaL, GF1.Gr)
         tmp2 = MM.mm(M, GF1.A, M, GrGammaR)
         tmp = tmp1+1j/2.*(MM.dagger(tmp2)-tmp2)
         Tlambda1 = MM.mm(GammaLGr, tmp, GF1.Ga)
