@@ -34,6 +34,7 @@ from __future__ import print_function
 import numpy as N
 import netCDF4 as NC4
 import sys
+from pathlib import Path
 import Inelastica.physics.constants as PC
 import Inelastica.misc.valuecheck as VC
 import Inelastica.io.log as Log
@@ -133,6 +134,9 @@ def GetOptions(argv):
                    help='Voltage fraction over the left-center interface [default: %(default)s]')
     p.add_argument("--calc-noise", action="store_true", help="Calculate noise terms -- WBA only.")
 
+    # Optional dH
+    p.add_argument("--deltaH", type=Path, default=None, help="Specify a .delta.nc-file which will be added to the hamiltonian.")
+
     # Parse the options
     options = p.parse_args(argv)
 
@@ -190,40 +194,40 @@ def main(options):
     print('Inelastica: Reading ', options.PhononNetCDF)
     hw = NCfile.variables['hw'][:]
     # Work with GFs etc for positive (V>0: \mu_L>\mu_R) and negative (V<0: \mu_L<\mu_R) bias voltages
-    GFp = NEGF.GF(options.TSHS, elecL, elecR,
-                  Bulk=options.UseBulk, DeviceAtoms=options.DeviceAtoms,
-                  BufferAtoms=options.buffer,
-                  forceNoFold=bool(options.tbtse)
-                  )
-    # Prepare lists for various trace factors
-    #GF.dGnout = []
-    #GF.dGnin = []
-    GFp.P1T = N.zeros(len(hw), N.float)     # M.A.M.A (total e-h damping)
-    GFp.P2T = N.zeros(len(hw), N.float)     # M.AL.M.AR (emission)
-    GFp.ehDampL = N.zeros(len(hw), N.float) # M.AL.M.AL (L e-h damping)
-    GFp.ehDampR = N.zeros(len(hw), N.float) # M.AR.M.AR (R e-h damping)
-    GFp.nHT = N.zeros(len(hw), N.float)     # non-Hilbert/Isym factor
-    GFp.HT = N.zeros(len(hw), N.float)      # Hilbert/Iasym factor
-    GFp.dIel = N.zeros(len(hw), N.float)
-    GFp.dIinel = N.zeros(len(hw), N.float)
-    GFp.dSel = N.zeros(len(hw), N.float)
-    GFp.dSinel = N.zeros(len(hw), N.float)
-    #
-    GFm = NEGF.GF(options.TSHS, elecL, elecR,
-                  Bulk=options.UseBulk, DeviceAtoms=options.DeviceAtoms,
-                  BufferAtoms=options.buffer,
-                  forceNoFold=bool(options.tbtse)
-                  )
-    GFm.P1T = N.zeros(len(hw), N.float)     # M.A.M.A (total e-h damping)
-    GFm.P2T = N.zeros(len(hw), N.float)     # M.AL.M.AR (emission)
-    GFm.ehDampL = N.zeros(len(hw), N.float) # M.AL.M.AL (L e-h damping)
-    GFm.ehDampR = N.zeros(len(hw), N.float) # M.AR.M.AR (R e-h damping)
-    GFm.nHT = N.zeros(len(hw), N.float)     # non-Hilbert/Isym factor
-    GFm.HT = N.zeros(len(hw), N.float)      # Hilbert/Iasym factor
-    GFm.dIel = N.zeros(len(hw), N.float)
-    GFm.dIinel = N.zeros(len(hw), N.float)
-    GFm.dSel = N.zeros(len(hw), N.float)
-    GFm.dSinel = N.zeros(len(hw), N.float)
+    GFp = NEGF.GF(
+        options.TSHS,
+        elecL,
+        elecR,
+        Bulk=options.UseBulk,
+        DeviceAtoms=options.DeviceAtoms,
+        BufferAtoms=options.buffer,
+        forceNoFold=bool(options.tbtse),
+        deltaH_fn=options.deltaH,
+    )
+    GFm = NEGF.GF(
+        options.TSHS,
+        elecL,
+        elecR,
+        Bulk=options.UseBulk,
+        DeviceAtoms=options.DeviceAtoms,
+        BufferAtoms=options.buffer,
+        forceNoFold=bool(options.tbtse),
+        deltaH_fn=options.deltaH,
+    )
+
+    nhw = len(hw)
+    for G in (GFp, GFm):
+        G.P1T = N.zeros(nhw, N.float)     # M.A.M.A (total e-h damping)
+        G.P2T = N.zeros(nhw, N.float)     # M.AL.M.AR (emission)
+        G.ehDampL = N.zeros(nhw, N.float) # M.AL.M.AL (L e-h damping)
+        G.ehDampR = N.zeros(nhw, N.float) # M.AR.M.AR (R e-h damping)
+        G.nHT = N.zeros(nhw, N.float)     # non-Hilbert/Isym factor
+        G.HT = N.zeros(nhw, N.float)      # Hilbert/Iasym factor
+        G.dIel = N.zeros(nhw, N.float)
+        G.dIinel = N.zeros(nhw, N.float)
+        G.dSel = N.zeros(nhw, N.float)
+        G.dSinel = N.zeros(nhw, N.float)
+
     # Calculate transmission at Fermi level
     GFp.calcGF(options.energy+options.eta*1.0j, options.kpoint[0:2], ispin=options.iSpin,
                etaLead=options.etaLead, useSigNCfiles=options.signc, SpectralCutoff=options.SpectralCutoff)
