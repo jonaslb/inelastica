@@ -1669,10 +1669,10 @@ class HS(object):
             # cheat a bit for checking sanity... (by using sisl instead of actual loaded values)
             g = si.get_sile(fn).read_geometry()
             if not (
-                g.sc.equal(self.deltaH.sc*0.53, tol=1e-1)
-                # Temporary 0.53 due to sisl bug zerothi/sisl#234
-                and N.allclose(g.xyz, self.deltaH.geometry.xyz * 0.53, atol=1e-1)
-                and all(a1.no == a2.no for a1, a2 in zip(g.atoms, self.deltaH.geometry.atoms))
+                # g.sc.equal(self.deltaH.sc*0.53, tol=1e-1)
+                # # Temporary 0.53 due to sisl bug zerothi/sisl#234
+                # and N.allclose(g.xyz, self.deltaH.geometry.xyz * 0.53, atol=1e-1)
+                all(a1.no == a2.no for a1, a2 in zip(g.atoms, self.deltaH.geometry.atoms))
             ):
                 raise ValueError(f"The geometry in {deltaH_fn} does not match the one in {fn}.")
 
