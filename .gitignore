@@ -3,3 +3,6 @@ build
 Inelastica/info.py
 docs/build
 docs/api-gen
+*.egg-info
+__config__.py
+*.so

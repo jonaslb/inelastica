@@ -519,7 +519,7 @@ class ElectrodeSelfEnergy(object):
 
 class GF(object):
 
-    def __init__(self, TSHSfile, elecL, elecR, Bulk=True, DeviceAtoms=[0, 0], BufferAtoms=N.empty((0,))):
+    def __init__(self, TSHSfile, elecL, elecR, Bulk=True, DeviceAtoms=[0, 0], BufferAtoms=N.empty((0,)), deltaH_fn=None):
         """
         Calculate Green's functions etc for TSHSfile connected to left/right
         electrode (class ElectrodeSelfEnergy).
@@ -539,7 +539,7 @@ class GF(object):
         BufferAtoms: A list of buffer atoms
         """
         self.elecL, self.elecR, self.Bulk = elecL, elecR, Bulk
-        self.HS = SIO.HS(TSHSfile, BufferAtoms=BufferAtoms)
+        self.HS = SIO.HS(TSHSfile, BufferAtoms=BufferAtoms, deltaH_fn=deltaH_fn)
         print('GF: UseBulk=', Bulk)
         self.DeviceAtoms = DeviceAtoms
         if DeviceAtoms[0] <= 1:

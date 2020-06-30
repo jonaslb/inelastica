@@ -33,6 +33,15 @@ import netCDF4 as NC4
 import Inelastica.physics.constants as PC
 import Inelastica.misc.valuecheck as VC
 
+# For deltaH, use sisl (optional otherwise)
+try:
+    import sisl
+    def get_sisl(err=""):
+        return sisl
+except ImportError:
+    def get_sisl(err=""):
+        raise ImportError("Cant import sisl " + err)
+
 # For speed some routines can be linked as F90 code
 try:
     import Inelastica.fortran.F90helpers as F90
@@ -1590,7 +1599,7 @@ class HS(object):
 
     """
 
-    def __init__(self, fn, BufferAtoms=N.empty((0,)), UseF90helpers=True):
+    def __init__(self, fn, BufferAtoms=N.empty((0,)), UseF90helpers=True, deltaH_fn=None):
         self.fn = fn
         if UseF90helpers and fn.endswith('.gz'):
             sys.exit('io.siesta.HS.__init__: F90helpers do not support reading of gzipped TSHS-files. Please unzip and try again.\n')
@@ -1649,6 +1658,22 @@ class HS(object):
         if not self.gamma and not self.onlyS and self.version == 0:
             self.removeUnitCellXij(UseF90helpers) # Remove phase change in unitcell
         self.resetkpoint() # save time by not repeating
+
+        # Get deltaH
+        self.deltaH = None
+        if deltaH_fn is not None:
+            si = get_sisl(err=f"for reading the specified deltaH {deltaH_fn}")
+            if not str(deltaH_fn).endswith("delta.nc"):
+                raise ValueError("deltaH_fn must be a .delta.nc file.")
+            self.deltaH = si.get_sile(deltaH_fn).read_delta()
+            # cheat a bit for checking sanity... (by using sisl instead of actual loaded values)
+            g = si.get_sile(fn).read_geometry()
+            if not (
+                g.sc.equal(self.deltaH.sc, tol=1e-3) 
+                and N.allclose(g.xyz, self.deltaH.geometry.xyz, atol=1e-3)
+                and all(a1.no == a2.no for a1, a2 in zip(g.atoms, self.deltaH.geometry.atoms))
+            ):
+                raise ValueError(f"The geometry in {deltaH_fn} does not match the one in {fn}.")
 
     def resetkpoint(self):
         """
@@ -1805,16 +1830,26 @@ class HS(object):
         if self.gamma:
             VC.Check("same-kpoint", abs(kpoint),
                      "Trying to set non-zero k-point for Gamma point calculation.")
-        if N.any(N.abs(self.kpoint-kpoint) > VC.GetCheck("same-kpoint")):
-            if verbose:
-                print("io.siesta.HS.setkpoint: %s k = %s" % (self.fn, str(kpoint)) )
-            self.kpoint = kpoint
-            self.S = self.setkpointhelper(self.Ssparse, kpoint, UseF90helpers, atype=atype)
-            if not self.onlyS:
-                self.H = N.empty((self.nspin, self.nuo, self.nuo), atype)
-                for ispin in range(self.nspin):
-                    self.H[ispin, :, :] = self.setkpointhelper(self.Hsparse[:, ispin], kpoint, UseF90helpers, atype=atype) \
-                        - self.ef * self.S
+        if not N.any(N.abs(self.kpoint-kpoint) > VC.GetCheck("same-kpoint")):
+            return
+        if verbose:
+            print("io.siesta.HS.setkpoint: %s k = %s" % (self.fn, str(kpoint)))
+        self.kpoint = kpoint
+        self.S = self.setkpointhelper(self.Ssparse, kpoint, UseF90helpers, atype=atype)
+        if self.onlyS:
+            return
+        self.H = N.empty((self.nspin, self.nuo, self.nuo), atype)
+        for ispin in range(self.nspin):
+            self.H[ispin, :, :] = self.setkpointhelper(self.Hsparse[:, ispin], kpoint, UseF90helpers, atype=atype) \
+                - self.ef * self.S
+            if self.deltaH is not None:
+                if self.deltaH.spin.spins > 1:
+                    self.H[ispin, :, :] += self.deltaH.Pk(k=kpoint, spin=ispin, format="array")
+                else:
+                    self.H[ispin, :, :] += self.deltaH.Pk(k=kpoint, format="array")
+            
+            
+            
 
     def setkpointhelper(self, Sparse, kpoint, UseF90helpers=True, atype=N.complex):
         """
