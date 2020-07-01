@@ -1665,16 +1665,19 @@ class HS(object):
             si = get_sisl(err=f"for reading the specified deltaH {deltaH_fn}")
             if not str(deltaH_fn).endswith("delta.nc"):
                 raise ValueError("deltaH_fn must be a .delta.nc file.")
+            print(f"Reading deltaH from {deltaH_fn}...")
             self.deltaH = si.get_sile(deltaH_fn).read_delta()
             # cheat a bit for checking sanity... (by using sisl instead of actual loaded values)
             g = si.get_sile(fn).read_geometry()
             if not (
-                # g.sc.equal(self.deltaH.sc*0.53, tol=1e-1)
-                # # Temporary 0.53 due to sisl bug zerothi/sisl#234
-                # and N.allclose(g.xyz, self.deltaH.geometry.xyz * 0.53, atol=1e-1)
-                all(a1.no == a2.no for a1, a2 in zip(g.atoms, self.deltaH.geometry.atoms))
+                g.sc.equal(self.deltaH.sc, tol=1e-3)
+                and N.allclose(g.xyz, self.deltaH.geometry.xyz, atol=1e-3)
+                and all(a1.no == a2.no for a1, a2 in zip(g.atoms, self.deltaH.geometry.atoms))
             ):
                 raise ValueError(f"The geometry in {deltaH_fn} does not match the one in {fn}.")
+            # Also check some actual loaded values tho
+            if not N.allclose(self.xa, g.xyz):
+                raise ValueError("Inelastica has loaded values different from what was expected!")
 
     def resetkpoint(self):
         """
