@@ -1676,7 +1676,7 @@ class HS(object):
             ):
                 raise ValueError(f"The geometry in {deltaH_fn} does not match the one in {fn}.")
             # Also check some actual loaded values tho
-            if not N.allclose(self.xa, g.xyz):
+            if not N.allclose(self.xa.T, g.xyz):
                 raise ValueError("Inelastica has loaded values different from what was expected!")
 
     def resetkpoint(self):
