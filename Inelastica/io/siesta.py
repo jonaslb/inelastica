@@ -1844,13 +1844,10 @@ class HS(object):
             self.H[ispin, :, :] = self.setkpointhelper(self.Hsparse[:, ispin], kpoint, UseF90helpers, atype=atype) \
                 - self.ef * self.S
             if self.deltaH is not None:
-                if self.deltaH.spin.spins > 1:
-                    self.H[ispin, :, :] += self.deltaH.Pk(k=kpoint, spin=ispin, format="array")
-                else:
-                    self.H[ispin, :, :] += self.deltaH.Pk(k=kpoint, format="array")
-            
-            
-            
+                pkargs = dict(k=kpoint, spin=ispin, format="array")
+                if self.deltaH.spin.spins == 1:
+                    del pkargs["spin"]
+                self.H[ispin, :, :] += self.deltaH.Pk(**pkargs)
 
     def setkpointhelper(self, Sparse, kpoint, UseF90helpers=True, atype=N.complex):
         """
