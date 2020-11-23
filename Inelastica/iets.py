@@ -220,14 +220,14 @@ def main(options):
                     raise ValueError(
                         f"This is a phonon netcdf HS wrapper. Only supports k={self._k} for this file."
                     )
-                self.H = NCfile["H0"][:]
+                self.H = NCfile["H0"][:]  # all spin indices
                 if "H0.imag" in NCfile.variables:
                     self.H = self.H.astype(complex)
                     self.H.imag = NCfile["H0.imag"][:]
-                self.S = NCfile["S0"][:]
+                self.S = NCfile["S0"][0]  # superfluous spin index
                 if "S0.imag" in NCfile.variables:
                     self.S = self.S.astype(complex)
-                    self.S.imag = NCfile["S0.imag"][:]
+                    self.S.imag = NCfile["S0.imag"][0]
     else:
         def getHSobj():
             return SIO.HS(options.TSHS, BufferAtoms=options.buffer)
