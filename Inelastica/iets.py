@@ -264,12 +264,7 @@ def main(options):
     # Calculate transmission at Fermi level
     GFp.calcGF(options.energy+options.eta*1.0j, options.kpoint[0:2], ispin=options.iSpin,
                etaLead=options.etaLead, useSigNCfiles=options.signc, SpectralCutoff=options.SpectralCutoff)
-    L = options.bufferL
-    # Pad lasto with zeroes to enable basis generation...
-    lasto = N.zeros((GFp.HS.nua+L+1,), N.int)
-    lasto[L:] = GFp.HS.lasto
-    basis = SIO.BuildBasis(options.fn, options.DeviceAtoms[0]+L, options.DeviceAtoms[1]+L, lasto)
-    basis.ii -= L
+
     TeF = MM.trace(GFp.TT).real
     GFp.TeF = TeF
     GFm.TeF = TeF
@@ -284,8 +279,8 @@ def main(options):
         GFm.calcGF(options.energy+options.eta*1.0j, options.kpoint[0:2], ispin=options.iSpin,
                    etaLead=options.etaLead, useSigNCfiles=options.signc, SpectralCutoff=options.SpectralCutoff)
         for ihw in (hw > options.modeCutoff).nonzero()[0]:
-            calcTraces(options, GFp, GFm, basis, NCfile, ihw)
-            calcTraces(options, GFm, GFp, basis, NCfile, ihw)
+            calcTraces(options, GFp, GFm, NCfile, ihw, recycle=recycle_p)
+            calcTraces(options, GFm, GFp, NCfile, ihw, recycle=recycle_m)
         writeFGRrates(options, GFp, hw, NCfile)
     else:
         # LOEscale=1.0 => Generalized LOE, PRB 89, 081405(R) (2014) [arXiv:1312.7625]
@@ -294,16 +289,16 @@ def main(options):
                        etaLead=options.etaLead, useSigNCfiles=options.signc, SpectralCutoff=options.SpectralCutoff)
             GFm.calcGF(options.energy+hw[ihw]*options.LOEscale*(VfracL-1.)+options.eta*1.0j, options.kpoint[0:2], ispin=options.iSpin,
                        etaLead=options.etaLead, useSigNCfiles=options.signc, SpectralCutoff=options.SpectralCutoff)
-            calcTraces(options, GFp, GFm, basis, NCfile, ihw)
+            calcTraces(options, GFp, GFm, NCfile, ihw)
             if VfracL != 0.5:
                 GFp.calcGF(options.energy-hw[ihw]*options.LOEscale*(VfracL-1.)+options.eta*1.0j, options.kpoint[0:2], ispin=options.iSpin,
                            etaLead=options.etaLead, useSigNCfiles=options.signc, SpectralCutoff=options.SpectralCutoff)
                 GFm.calcGF(options.energy-hw[ihw]*options.LOEscale*VfracL+options.eta*1.0j, options.kpoint[0:2], ispin=options.iSpin,
                            etaLead=options.etaLead, useSigNCfiles=options.signc, SpectralCutoff=options.SpectralCutoff)
-            calcTraces(options, GFm, GFp, basis, NCfile, ihw)
+            calcTraces(options, GFm, GFp, NCfile, ihw)
 
     # Multiply traces with voltage-dependent functions
-    data = calcIETS(options, GFp, GFm, basis, hw)
+    data = calcIETS(options, GFp, GFm, hw)
     NCfile.close()
     NEGF.SavedSig.close()
     Log.PrintMainFooter(options)
@@ -399,7 +394,7 @@ def IntegrityCheck(options, GF, NCfile):
         sys.exit('Inelastica: Error - inconsistency detected for device region.\n')
 
 
-def calcTraces(options, GF1, GF2, basis, NCfile, ihw):
+def calcTraces(options, GF1, GF2, NCfile, ihw):
     # Calculate various traces over the electronic structure
     # Electron-phonon couplings
     ihw = int(ihw)
@@ -474,7 +469,7 @@ def calcTraces(options, GF1, GF2, basis, NCfile, ihw):
         GF1.dSinel[ihw] = NEGF.AssertReal(MM.trace(Qlambda+MM.mm(OneMinusTwoT, Tlambda1)), 'dSinel[%i]'%ihw)
 
 
-def calcIETS(options, GFp, GFm, basis, hw):
+def calcIETS(options, GFp, GFm, hw):
     # Calculate product of electronic traces and voltage functions
     print('Inelastica.calcIETS: nHTp =', GFp.nHT*PC.unitConv) # OK
     print('Inelastica.calcIETS: nHTm =', GFm.nHT*PC.unitConv) # OK
