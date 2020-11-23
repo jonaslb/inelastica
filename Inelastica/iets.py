@@ -328,6 +328,12 @@ def IntegrityCheck(options, GF, NCfile):
     # Perform consistency checks for device region in
     # PH and TS calculations by comparing coordinates
     # and atom numbers
+    if options.use_phonon_ncdf_hamilton:
+        print(
+            "WARNING: Skipping Integrity Check because you've passed the option to"
+            " use the phonon ncdf only. Then we can't be checking with any fdf."
+        )
+        return
     PH_dev = NCfile.variables['DeviceAtoms'][:]
     PH_dyn = NCfile.variables['DynamicAtoms'][:]
     PH_xyz = NCfile.variables['GeometryXYZ'][:]
