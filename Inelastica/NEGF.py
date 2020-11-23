@@ -542,7 +542,10 @@ class GF(object):
         BufferAtoms: A list of buffer atoms
         """
         self.elecL, self.elecR, self.Bulk = elecL, elecR, Bulk
-        self.HS = SIO.HS(TSHSfile, BufferAtoms=BufferAtoms, deltaH_fn=deltaH_fn)
+        if isinstance(TSHSfile, str):
+            self.HS = SIO.HS(TSHSfile, BufferAtoms=BufferAtoms, deltaH_fn=deltaH_fn)
+        else:
+            self.HS = TSHSfile
         print('GF: UseBulk=', Bulk)
         self.DeviceAtoms = DeviceAtoms
         self.forceNoFold = forceNoFold
@@ -558,11 +561,15 @@ class GF(object):
             self.FoldedR = True
         if forceNoFold:
             self.FoldedL, self.FoldedR = False, False
-        self.DeviceOrbs = [self.HS.lasto[DeviceAtoms[0]-1]+1, self.HS.lasto[DeviceAtoms[1]]]
 
-        self.nuo0, self.nuoL0, self.nuoR0 = self.HS.nuo, elecL.NA1*elecL.NA2*elecL.HS.nuo, elecR.NA1*elecR.NA2*elecR.HS.nuo
-        self.nuo = self.DeviceOrbs[1]-self.DeviceOrbs[0]+1
-        self.nuoL, self.nuoR = self.nuoL0, self.nuoR0 # Not folded, for folded case changed below
+        if self.HS.is_device_HS:
+            self.DeviceOrbs = [1, self.HS.no]  # Yes, it appears that the first element is the *second* orbital. Glorious.
+            self.nuo = self.nuo0 = self.nuoL = self.nuoL0 = self.nuoR = self.nuoR0 = self.HS.no
+        else:
+            self.DeviceOrbs = [self.HS.lasto[DeviceAtoms[0]-1]+1, self.HS.lasto[DeviceAtoms[1]]]
+            self.nuo0, self.nuoL0, self.nuoR0 = self.HS.nuo, elecL.NA1*elecL.NA2*elecL.HS.nuo, elecR.NA1*elecR.NA2*elecR.HS.nuo
+            self.nuo = self.DeviceOrbs[1]-self.DeviceOrbs[0]+1
+            self.nuoL, self.nuoR = self.nuoL0, self.nuoR0 # Not folded, for folded case changed below
 
         print("GF:", TSHSfile)
         print("Device atoms %i-%i, orbitals %i-%i"%(tuple(self.DeviceAtoms+self.DeviceOrbs)))

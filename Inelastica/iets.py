@@ -110,6 +110,13 @@ def GetOptions(argv):
                         "This allows support for multi-electrode setups where still only 2 "
                         "chemical potentials exist and only transport between the sets are "
                         "interesting.")
+    p.add_argument(
+        "--use-phonon-ncdf-hamilton", action="store_true",
+        help=(
+            "Uses the hamiltonian stored in the Phonon netcdf file. It is assumed to be the device. Only use this along --tbtse with"
+            " self-energies already folded into this device region."
+        )
+    )
     p.add_argument('-l', '--etaLead', dest='etaLead', type=float, default=0.0,
                    help='Additional imaginary part added ONLY in the leads (surface GF) [default: %(default)s eV]')
     p.add_argument('--SpectralCutoff', dest='SpectralCutoff', type=float, default=1e-8,
@@ -162,8 +169,9 @@ def main(options):
     VC.OptionsCheck(options)
     Log.PrintMainHeader(options)
 
-    options.XV = '%s/%s.XV'%(options.head, options.systemlabel)
-    options.geom = MG.Geom(options.XV, BufferAtoms=options.buffer)
+    if not options.skip_fdf:
+        options.XV = '%s/%s.XV'%(options.head, options.systemlabel)
+        options.geom = MG.Geom(options.XV, BufferAtoms=options.buffer)
     # Voltage fraction over left-center interface
     VfracL = options.VfracL # default is 0.5
     print('Inelastica: Voltage fraction over left-center interface: VfracL =', VfracL)
@@ -193,9 +201,40 @@ def main(options):
     NCfile = NC4.Dataset(options.PhononNetCDF, 'r')
     print('Inelastica: Reading ', options.PhononNetCDF)
     hw = NCfile.variables['hw'][:]
+
+    if options.use_phonon_ncdf_hamilton:
+        class getHSobj:
+            is_device_HS = True
+            def __init__(self):
+                self.ncf = NCfile
+                self._k = self.ncf["kpoint"][:]
+                self.nua = self.ncf.dimensions["dev_atoms"].size
+                self.nuo = self.no = self.ncf.dimensions["norb"].size
+                self.gamma = N.abs(self._k).sum() != 0
+
+            def resetkpoint(self):
+                pass
+
+            def setkpoint(self, kpoint, verbose=False):
+                if not N.allclose(kpoint, self._k[:kpoint.size]):
+                    raise ValueError(
+                        f"This is a phonon netcdf HS wrapper. Only supports k={self._k} for this file."
+                    )
+                self.H = NCfile["H0"][:]
+                if "H0.imag" in NCfile.variables:
+                    self.H = self.H.astype(complex)
+                    self.H.imag = NCfile["H0.imag"][:]
+                self.S = NCfile["S0"][:]
+                if "S0.imag" in NCfile.variables:
+                    self.S = self.S.astype(complex)
+                    self.S.imag = NCfile["S0.imag"][:]
+    else:
+        def getHSobj():
+            return SIO.HS(options.TSHS, BufferAtoms=options.buffer)
+
     # Work with GFs etc for positive (V>0: \mu_L>\mu_R) and negative (V<0: \mu_L<\mu_R) bias voltages
     GFp = NEGF.GF(
-        options.TSHS,
+        getHSobj(),
         elecL,
         elecR,
         Bulk=options.UseBulk,
@@ -205,7 +244,7 @@ def main(options):
         deltaH_fn=options.deltaH,
     )
     GFm = NEGF.GF(
-        options.TSHS,
+        getHSobj(),
         elecL,
         elecR,
         Bulk=options.UseBulk,

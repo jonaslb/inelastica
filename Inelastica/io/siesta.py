@@ -1598,6 +1598,7 @@ class HS(object):
     For gamma: xij is set to 0 and indxuo set manually to 1:nou and -1 for nou+1:no to catch errors!
 
     """
+    is_device_HS = False
 
     def __init__(self, fn, BufferAtoms=N.empty((0,)), UseF90helpers=True, deltaH_fn=None):
         self.fn = fn

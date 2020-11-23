@@ -117,22 +117,32 @@ def OptionsCheck(opts):
         print('\n'+exe+': Creating folder {0}'.format(opts.DestDir))
         os.mkdir(opts.DestDir)
 
-    if not osp.isfile(opts.fn):
+    skip_fdf = (
+        hasattr(opts, "use_phonon_ncdf_hamilton")
+        and opts.use_phonon_ncdf_hamilton
+    )
+    opts.skip_fdf = skip_fdf
+    if skip_fdf:
+        if not bool(opts.tbtse):
+            raise ValueError("Cannot use use_phonon_ncdf_hamilton option without tbtse")
+
+    if not skip_fdf and not osp.isfile(opts.fn):
         raise IOError("FDF-file not found: "+opts.fn)
 
     # Read SIESTA files
     opts.head = osp.split(opts.fn)[0]
     if opts.head == '': # set filepath if missing
         opts.head = '.'
-    print(exe+": Reading keywords from {0} \n".format(opts.fn))
+    if not skip_fdf:
+        print(exe+": Reading keywords from {0} \n".format(opts.fn))
 
-    opts.systemlabel = SIO.GetFDFlineWithDefault(opts.fn, 'SystemLabel', str, 'siesta', exe)
-    opts.TSHS = '%s/%s.TSHS'%(opts.head, opts.systemlabel)
+        opts.systemlabel = SIO.GetFDFlineWithDefault(opts.fn, 'SystemLabel', str, 'siesta', exe)
+        opts.TSHS = '%s/%s.TSHS'%(opts.head, opts.systemlabel)
 
     # These first keys can be used, but they are superseeded by keys in the TS.Elec.<> block
     # Hence if they are read in first it will do it in correct order.
 
-    if opts.UseBulk < 0:
+    if not skip_fdf and opts.UseBulk < 0:
         # Note NRP:
         #  in principle this is now a per-electrode setting which
         #  may be useful for certain systems...
@@ -200,25 +210,30 @@ def OptionsCheck(opts):
         return TSHS, NA1, NA2, semiinf
 
     # Look up electrode block
-    block = SIO.GetFDFblock(opts.fn, KeyWord='TS.Elecs')
-    if len(block) == 0:
-        # Did not find the electrode block, defaults to old naming scheme
-        opts.fnL, opts.NA1L, opts.NA2L, opts.semiinfL = get_elec_vars('Left')
-        opts.fnR, opts.NA1R, opts.NA2R, opts.semiinfR = get_elec_vars('Right')
-    elif len(block) == 2:
-        # NB: The following assumes that the left electrode is the first in the block!
-        opts.fnL, opts.NA1L, opts.NA2L, opts.semiinfL = get_elec_vars(block[0][0])
-        opts.fnR, opts.NA1R, opts.NA2R, opts.semiinfR = get_elec_vars(block[1][0])
-    elif "uniteelecs" in opts and opts.uniteelecs is not None:
-        # Fill these with Nones, hope they are not being used(!)
+    if skip_fdf:
         opts.fnL, opts.NA1L, opts.NA2L, opts.semiinfL = [None,]*3 + [0]
         opts.fnR, opts.NA1R, opts.NA2R, opts.semiinfR = [None,]*3 + [0]
+        opts.buffer, L, R = _np.array([], dtype=int), 0, 0
     else:
-        print(block)
-        raise IOError('Currently only two electrodes are supported')
+        block = SIO.GetFDFblock(opts.fn, KeyWord='TS.Elecs')
+        if len(block) == 0:
+            # Did not find the electrode block, defaults to old naming scheme
+            opts.fnL, opts.NA1L, opts.NA2L, opts.semiinfL = get_elec_vars('Left')
+            opts.fnR, opts.NA1R, opts.NA2R, opts.semiinfR = get_elec_vars('Right')
+        elif len(block) == 2:
+            # NB: The following assumes that the left electrode is the first in the block!
+            opts.fnL, opts.NA1L, opts.NA2L, opts.semiinfL = get_elec_vars(block[0][0])
+            opts.fnR, opts.NA1R, opts.NA2R, opts.semiinfR = get_elec_vars(block[1][0])
+        elif "uniteelecs" in opts and opts.uniteelecs is not None:
+            # Fill these with Nones, hope they are not being used(!)
+            opts.fnL, opts.NA1L, opts.NA2L, opts.semiinfL = [None,]*3 + [0]
+            opts.fnR, opts.NA1R, opts.NA2R, opts.semiinfR = [None,]*3 + [0]
+        else:
+            print(block)
+            raise IOError('Currently only two electrodes are supported')
 
-    # Read in number of buffer atoms
-    opts.buffer, L, R = SIO.GetBufferAtomsList(opts.TSHS, opts.fn)
+        # Read in number of buffer atoms
+        opts.buffer, L, R = SIO.GetBufferAtomsList(opts.TSHS, opts.fn)
     opts.bufferL = L
     opts.bufferR = R
 
@@ -228,21 +243,24 @@ def OptionsCheck(opts):
         opts.minBias = -abs(opts.maxBias)
 
     # Device region
-    if opts.DeviceFirst <= 0:
-        opts.DeviceFirst = SIO.GetFDFlineWithDefault(opts.fn, 'TS.TBT.PDOSFrom', int, 1, exe)
-    opts.DeviceFirst -= L
-    if opts.DeviceLast <= 0:
-        opts.DeviceLast = SIO.GetFDFlineWithDefault(opts.fn, 'TS.TBT.PDOSTo', int, 1e10, exe)
-    opts.DeviceLast -= L
-    opts.NumberOfAtoms = SIO.GetFDFlineWithDefault(opts.fn, 'NumberOfAtoms', int, 1e10, exe)
-    opts.NumberOfAtoms -= L + R
-    if opts.DeviceLast < opts.DeviceFirst:
-        print(exe+' error: DeviceLast<DeviceFirst not allowed. Setting DeviceLast=DeviceFirst')
-        opts.DeviceLast = opts.DeviceFirst
-    opts.DeviceAtoms = [max(opts.DeviceFirst, 1), min(opts.DeviceLast, opts.NumberOfAtoms)]
+    if not skip_fdf:
+        if opts.DeviceFirst <= 0:
+            opts.DeviceFirst = SIO.GetFDFlineWithDefault(opts.fn, 'TS.TBT.PDOSFrom', int, 1, exe)
+        opts.DeviceFirst -= L
+        if opts.DeviceLast <= 0:
+            opts.DeviceLast = SIO.GetFDFlineWithDefault(opts.fn, 'TS.TBT.PDOSTo', int, 1e10, exe)
+        opts.DeviceLast -= L
+        opts.NumberOfAtoms = SIO.GetFDFlineWithDefault(opts.fn, 'NumberOfAtoms', int, 1e10, exe)
+        opts.NumberOfAtoms -= L + R
+        if opts.DeviceLast < opts.DeviceFirst:
+            print(exe+' error: DeviceLast<DeviceFirst not allowed. Setting DeviceLast=DeviceFirst')
+            opts.DeviceLast = opts.DeviceFirst
+        opts.DeviceAtoms = [max(opts.DeviceFirst, 1), min(opts.DeviceLast, opts.NumberOfAtoms)]
 
     # Voltage
-    opts.voltage = SIO.GetFDFlineWithDefault(opts.fn, 'TS.Voltage', float, 0.0, exe)
+    opts.voltage = 0.0
+    if not skip_fdf:
+        opts.voltage = SIO.GetFDFlineWithDefault(opts.fn, 'TS.Voltage', float, 0.0, exe)
 
     #############
     # Here comes some specifics related to different executables:
