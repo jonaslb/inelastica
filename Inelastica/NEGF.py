@@ -773,7 +773,7 @@ class GF(object):
         kpoint3[0:2] = kpoint[:]
         self.HS.setkpoint(kpoint3, verbose=False)
         # Remove PBC in z-direction
-        if self.HS.gamma:
+        if self.HS.gamma or self.HS.is_device_HS:
             self.H0 = self.HS.H[ispin, :, :].copy()
             self.S0 = self.HS.S.copy()
             if not self.forceNoFold:
