@@ -679,9 +679,7 @@ class GF(object):
     def calcGF(self, ee, kpoint, ispin=0, etaLead=0.0, useSigNCfiles=False, SpectralCutoff=0.0):
         "Calculate GF etc at energy ee and 2d k-point"
         nuo, nuoL, nuoR = self.nuo, self.nuoL, self.nuoR
-        nuo0, nuoL0, nuoR0 = self.nuo0, self.nuoL0, self.nuoR0
         FoldedL, FoldedR = self.FoldedL, self.FoldedR
-        devSt, devEnd = self.DeviceOrbs[0], self.DeviceOrbs[1]
 
         # Determine whether electrode self-energies should be k-sampled or not
         try:
@@ -745,7 +743,8 @@ class GF(object):
             self.ARGLG = MM.mm(self.AR.L, self.AR.R[:, 0:nuoL], tmp)
             self.A = self.AL+self.AR
             # transmission matrix AL.GamR
-            self.TT = MM.mm(self.AL.R[:, nuo-nuoR:nuo], self.GamR, self.AL.L[nuo-nuoR:nuo, :])
+            self.Tr_TT = MM.trace(self.AL.R[:, nuo-nuoR:nuo], self.GamR, self.AL.L[nuo-nuoR:nuo, :])
+            # self.TT = MM.mm(self.AL.R[:, nuo-nuoR:nuo], self.GamR, self.AL.L[nuo-nuoR:nuo, :])
         else:
             self.AL = MM.mm(self.Gr[:, 0:nuoL], self.GamL, self.Ga[0:nuoL, :])
             tmp = MM.mm(self.GamL, self.Gr[0:nuoL, :])
@@ -754,10 +753,11 @@ class GF(object):
             self.ARGLG = MM.mm(self.AR[:, 0:nuoL], tmp)
             self.A = self.AL+self.AR
             # transmission matrix AL.GamR
-            self.TT = MM.mm(self.AL[nuo-nuoR:nuo, nuo-nuoR:nuo], self.GamR)
+            self.Tr_TT = MM.trace(self.AL[nuo-nuoR:nuo, nuo-nuoR:nuo], self.GamR)
+            # self.TT = MM.mm(self.AL[nuo-nuoR:nuo, nuo-nuoR:nuo], self.GamR)
 
-        print('NEGF.calcGF: Shape of transmission matrix (TT):', self.TT.shape)
-        print('NEGF.calcGF: Energy and total transmission Tr[TT].real:', ee, N.trace(self.TT).real)
+        # print('NEGF.calcGF: Shape of transmission matrix (TT):', self.TT.shape)
+        print('NEGF.calcGF: Energy and total transmission Tr[TT].real:', ee, self.Tr_TT.real)
         # Write also the Gammas in the full space of Gr/Ga/A
         # (needed for the inelastic shot noise)
         self.GammaL = N.zeros(self.Gr.shape, N.complex)
@@ -816,8 +816,8 @@ class GF(object):
 
     def calcTEIG(self, channels=10):
         # Transmission matrix (complex array)
-        TT = self.TT
-        Trans = N.trace(TT)
+        TT = MM.mm(self.AL[self.nuo-self.nuoR:self.nuo, self.nuo-self.nuoR:self.nuo], self.GamR)
+        Trans = self.Tr_TT
         VC.Check("trans-imaginary-part", Trans.imag,
                  "Transmission has large imaginary part")
         # Calculate eigenchannel transmissions too

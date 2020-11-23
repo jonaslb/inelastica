@@ -271,7 +271,7 @@ def main(options):
     GFp.calcGF(options.energy+options.eta*1.0j, options.kpoint[0:2], ispin=options.iSpin,
                etaLead=options.etaLead, useSigNCfiles=options.signc, SpectralCutoff=options.SpectralCutoff)
 
-    TeF = MM.trace(GFp.TT).real
+    TeF = GFp.Tr_TT.real
     GFp.TeF = TeF
     GFm.TeF = TeF
     # Check consistency of PHrun vs TSrun inputs
@@ -302,7 +302,12 @@ def main(options):
             GFm.calcGF(options.energy+hw[ihw]*options.LOEscale*(VfracL-1.)+options.eta*1.0j, options.kpoint[0:2], ispin=options.iSpin,
                        etaLead=options.etaLead, useSigNCfiles=options.signc, SpectralCutoff=options.SpectralCutoff)
             calcTraces(options, GFp, GFm, NCfile, ihw)
-            if VfracL != 0.5:
+            if VfracL == 1.0:  # GFm was calculated w/ hw*0, now GFp is calculated with hw*0
+                for attr in ("ARGLG", "AR", "AL", "ALT", "A"):
+                    setattr(GFp, attr, getattr(GFm, attr))
+                GFm.calcGF(options.energy-hw[ihw]*options.LOEscale*VfracL+options.eta*1.0j, options.kpoint[0:2], ispin=options.iSpin,
+                           etaLead=options.etaLead, useSigNCfiles=options.signc, SpectralCutoff=options.SpectralCutoff)
+            elif VfracL != 0.5:
                 GFp.calcGF(options.energy-hw[ihw]*options.LOEscale*(VfracL-1.)+options.eta*1.0j, options.kpoint[0:2], ispin=options.iSpin,
                            etaLead=options.etaLead, useSigNCfiles=options.signc, SpectralCutoff=options.SpectralCutoff)
                 GFm.calcGF(options.energy-hw[ihw]*options.LOEscale*VfracL+options.eta*1.0j, options.kpoint[0:2], ispin=options.iSpin,
