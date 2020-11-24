@@ -125,6 +125,7 @@ def OptionsCheck(opts):
     if skip_fdf:
         if not bool(opts.tbtse):
             raise ValueError("Cannot use use_phonon_ncdf_hamilton option without tbtse")
+        opts.systemlabel = "siesta"
 
     if not skip_fdf and not osp.isfile(opts.fn):
         raise IOError("FDF-file not found: "+opts.fn)
