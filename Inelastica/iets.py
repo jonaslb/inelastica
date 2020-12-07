@@ -435,17 +435,10 @@ def calcTraces(options, GF1, GF2, NCfile, ihw, recycle=None):
     # Electron-phonon couplings
     ihw = int(ihw)
     M = get_coupling(NCfile, ihw, options.iSpin)
-    # Calculation of intermediate quantity
-    # MARGLGM = MM.mm()  # these were inserted into t1 and t2
-    # MARGLGM2 = MM.mm()
     # LOE expressions in compact form
     t1 = MM.trace(M, GF1.ARGLG, M, GF2.AR)
-    t2 = MM.trace(M, GF2.ARGLG, M, GF1.AL)
-    # Note that compared with Eq. (10) of PRB89, 081405 (2014) we here use
-    # the definition B_lambda = MM.trace(t1-dagger(t2)), which in turn gives
-    # ReB = MM.trace(t1).real-MM.trace(t2).real
-    # ImB = MM.trace(t1).imag+MM.trace(t2).imag
-    K23 = t1.imag+t2.imag
+    t2 = MM.trace(M, GF2.ARGLG.T.conj(), M, GF1.AL)
+    K23 = t1.imag-t2.imag
     K4 = MM.trace(M, GF1.ALT, M, GF2.AR)
     aK23 = 2*(t1.real-t2.real) # asymmetric part
     # Non-Hilbert term defined here with a minus sign
